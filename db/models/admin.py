@@ -12,5 +12,5 @@ class AdminUser(Base):
     password_hash = Column(String(255), nullable=False)
     created_at = Column(TIMESTAMP, nullable=False)
     updated_at = Column(TIMESTAMP, nullable=True)
-
+    user_type = Column(String(255), nullable=False, default="admin")
     courses = relationship("Course", backref="creator")

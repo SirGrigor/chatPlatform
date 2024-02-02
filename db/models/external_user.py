@@ -12,6 +12,6 @@ class ExternalUser(Base):
     username = Column(String(255), nullable=False)
     created_at = Column(TIMESTAMP, nullable=False)
     updated_at = Column(TIMESTAMP)
-
+    user_type = Column(String(255), nullable=False, default="external")
     # Many-to-many relationship with Course
     courses = relationship("Course", secondary=user_course_association, back_populates="external_users")
