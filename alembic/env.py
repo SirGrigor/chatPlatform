@@ -1,8 +1,12 @@
 from logging.config import fileConfig
 import os
 from sqlalchemy import engine_from_config, pool
+from logging.config import fileConfig
+import os
+from sqlalchemy import engine_from_config, pool
 from alembic import context
-from db import base_class as Base
+from db.base_class import Base  # Import Base from the correct module
+from db.models import message, chat_session, course, document, message, refresh_token, user
 
 # Correctly retrieve the DATABASE_URL from the environment variables
 database_url = os.getenv("DATABASE_URL")
@@ -15,6 +19,7 @@ if database_url:
 
 fileConfig(config.config_file_name)
 target_metadata = Base.metadata
+
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -34,7 +39,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option(sqlalchemy_url)
+    url = config.get_main_option(database_url)
     context.configure(
         url=url,
         target_metadata=target_metadata,

@@ -1,9 +1,8 @@
-from typing import Optional
-
 from sqlalchemy.orm import Session
-from db.models import user as User
+from db.models.user import User
 from core.security import get_password_hash, verify_password
 from schemas.user import UserCreate
+from typing import Optional
 
 
 def create_user(db: Session, user_in: UserCreate) -> User:

@@ -6,7 +6,6 @@ from websocket.connection_manager import ConnectionManager
 
 app = FastAPI()
 
-# Initialize ConnectionManager with RabbitMQ URL
 manager = ConnectionManager(rabbitmq_url=settings.RABBITMQ_URL)
 
 

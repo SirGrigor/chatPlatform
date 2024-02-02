@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import relationship
 
-from ..base_class import Base
+from db.base_class import Base
 
 
 class RefreshToken(Base):
