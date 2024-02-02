@@ -4,6 +4,8 @@ from core.security import get_password_hash, verify_password
 from schemas.user import UserCreate
 from typing import Optional
 
+from services.jwt_manager import create_refresh_token
+
 
 def create_user(db: Session, user_in: UserCreate) -> User:
     hashed_password = get_password_hash(user_in.password)
@@ -11,6 +13,10 @@ def create_user(db: Session, user_in: UserCreate) -> User:
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+
+    # Create a refresh token for the new user using the JWT manager
+    create_refresh_token(db=db, user_id=db_user.id)
+
     return db_user
 
 
