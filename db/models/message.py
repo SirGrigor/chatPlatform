@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, Text, Boolean, TIMESTAMP, ForeignKey
-from sqlalchemy.orm import relationship
 
 from db.base_class import Base
+
 
 class Message(Base):
     __tablename__ = "messages"
@@ -11,5 +11,3 @@ class Message(Base):
     text = Column(Text, nullable=False)
     is_user_message = Column(Boolean, nullable=False)
     created_at = Column(TIMESTAMP, nullable=False)
-
-    chat_session = relationship("ChatSession", back_populates="messages")

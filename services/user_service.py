@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from db.models.user import User
+from db.models.admin import User
 from core.security import get_password_hash, verify_password
 from schemas.user import UserCreate
 from typing import Optional

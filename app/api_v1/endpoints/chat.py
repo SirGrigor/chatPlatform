@@ -5,7 +5,7 @@ from jose import JWTError
 from sqlalchemy.orm import Session
 from starlette.websockets import WebSocketDisconnect
 
-from db.models.user import User
+from db.models.admin import User
 from db.session import get_db
 from schemas.chat import ChatMessageOut
 from typing import List
