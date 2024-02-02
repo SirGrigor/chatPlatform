@@ -1,36 +1,62 @@
-from fastapi import APIRouter, WebSocket, Depends
+from datetime import datetime
 
-from core.config import settings
-from core.exceptions import WebSocketAuthException
-from websocket.connection_manager import ConnectionManager
-from services.jwt_manager import verify_token
-from db.session import get_db
+from fastapi import APIRouter, WebSocket, Depends, HTTPException
+from jose import JWTError
 from sqlalchemy.orm import Session
+from starlette.websockets import WebSocketDisconnect
+
+from db.models.user import User
+from db.session import get_db
+from schemas.chat import ChatMessageOut
+from typing import List
+import json
+
+from services.jwt_manager import verify_token
 
 router = APIRouter()
-manager = ConnectionManager(rabbitmq_url=settings.RABBITMQ_URL)
+
+active_connections: List[WebSocket] = []
 
 
-@router.websocket("/ws/{course_id}/{token}")
-async def websocket_endpoint(websocket: WebSocket, course_id: int, token: str, db: Session = Depends(get_db)):
+async def get_current_user(websocket: WebSocket, token: str = None, db: Session = Depends(get_db)) -> User:
+    if token is None:
+        await websocket.close(code=4001)
+        raise HTTPException(status_code=400, detail="Missing token")
     try:
-        # Attempt to verify the JWT token
         payload = verify_token(token)
-        # If verification passes, connect the user
-        await manager.connect(websocket)
-        await manager.broadcast(f"User connected to course {course_id}")
+        user_id = payload.get("user_id")
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            await websocket.close(code=4002)
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
+    except JWTError:
+        await websocket.close(code=4003)
+        raise HTTPException(status_code=401, detail="Invalid token")
 
-        # Communication loop
+
+async def connect(websocket: WebSocket, user: User):
+    await websocket.accept()
+    active_connections.append(websocket)
+
+
+def disconnect(websocket: WebSocket):
+    active_connections.remove(websocket)
+
+
+@router.websocket("/ws/chat/{token}")
+async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Depends(get_db)):
+    user = await get_current_user(websocket, token, db)
+    await connect(websocket, user)
+    try:
         while True:
             data = await websocket.receive_text()
-            await manager.send_message(course_id, data, payload)  # Assume send_message is adapted to use payload
-    except WebSocketAuthException as auth_exc:
-        # Handle authentication errors specifically
-        await websocket.close(code=4001)  # Use appropriate WebSocket close code
-        return
-    except Exception as e:
-        # Handle generic exceptions
-        await websocket.close(code=1011)  # Unexpected condition
-    finally:
-        # Ensure disconnection is handled gracefully
-        await manager.disconnect(websocket)
+            message = ChatMessageOut(sender_id=user.id, message=data, timestamp=datetime.now())
+            await broadcast(json.dumps(message.dict()))
+    except WebSocketDisconnect:
+        disconnect(websocket)
+
+
+async def broadcast(message: str):
+    for connection in active_connections:
+        await connection.send_text(message)

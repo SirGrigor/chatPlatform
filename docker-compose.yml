@@ -11,8 +11,10 @@ services:
     environment:
       - RABBITMQ_URL=amqp://user:password@rabbitmq/%2F
       - DATABASE_URL=postgresql://postgres:postgres@db/mydatabase
+      - DOCUMENT_STORAGE_PATH=/app/documents # Add this line
     volumes:
       - .:/app
+      - document_storage:/app/documents # Add this line for persistent document storage
     entrypoint: /app/entrypoint.sh
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
@@ -46,3 +48,5 @@ services:
 
 volumes:
   postgres_data:
+  document_storage:
+
