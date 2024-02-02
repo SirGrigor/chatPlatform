@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rabbitmq
+      - db
+    environment:
+      - RABBITMQ_URL=amqp://user:password@rabbitmq/%2F
+      - DATABASE_URL=postgresql://postgres:postgres@db/mydatabase
+    volumes:
+      - .:/app
+    entrypoint: /app/entrypoint.sh
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672" # RabbitMQ
+      - "15672:15672" # Management console
+
+  alembic:
+    build: .
+    command: alembic upgrade head
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
