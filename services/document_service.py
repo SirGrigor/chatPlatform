@@ -2,9 +2,11 @@ import shutil
 import uuid
 
 from fastapi import UploadFile
+from sqlalchemy import func
 from sqlalchemy.orm import Session
-from db.models import document as Document
 import os
+
+from db.models.document import Document
 
 
 def save_document_file(file, file_path: str):
@@ -13,7 +15,8 @@ def save_document_file(file, file_path: str):
 
 
 def create_document(db: Session, course_id: int, filename: str, filepath: str, file_type: str) -> Document:
-    db_document = Document(course_id=course_id, filename=filename, filepath=filepath, file_type=file_type)
+    db_document = Document(course_id=course_id, filename=filename, filepath=filepath, file_type=file_type,
+                           created_at=func.now(), updated_at=func.now())
     db.add(db_document)
     db.commit()
     db.refresh(db_document)
