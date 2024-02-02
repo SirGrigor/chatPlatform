@@ -1,18 +1,25 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
 class CourseCreate(BaseModel):
     title: str
     description: str
+    admin_user_id: int
 
 
-class CourseOut(CourseCreate):
+class CourseOut(BaseModel):
     id: int
-    created_by: int
+    title: str
+    description: str
+    admin_user_id: int
     created_at: datetime
-    updated_at: Optional[datetime]
+
+
+class CoursesListOut(BaseModel):
+    courses: List[CourseOut]
+    total: int
 
     class Config:
         orm_mode = True
