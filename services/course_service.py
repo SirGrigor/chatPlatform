@@ -1,7 +1,10 @@
+import os
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from db.models.course import Course
+from db.models.document import Document
 from schemas.course import CourseCreate
 
 
@@ -24,3 +27,24 @@ def create_course(db: Session, course_in: CourseCreate, user_id: int) -> Course:
 
 def get_courses(db: Session) -> list[Course]:
     return db.query(Course).all()
+
+
+def delete_course(db: Session, course_id: int) -> bool:
+    """
+    Deletes a course by its ID, including related documents.
+    """
+    # First, delete related documents
+    documents = db.query(Document).filter(Document.course_id == course_id).all()
+    for document in documents:
+        # Delete physical file
+        if os.path.exists(document.filepath):
+            os.remove(document.filepath)
+        db.delete(document)
+
+    # Then, delete the course
+    db_course = db.query(Course).filter(Course.id == course_id).first()
+    if db_course:
+        db.delete(db_course)
+        db.commit()
+        return True
+    return False

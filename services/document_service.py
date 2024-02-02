@@ -36,3 +36,22 @@ def upload_document(db: Session, course_id: int, file: UploadFile,
 
     return create_document(db=db, course_id=course_id, filename=filename, filepath=file_path,
                            file_type=file.content_type)
+
+
+def delete_document(db: Session, document_id: int) -> bool:
+    """
+    Deletes a document by its ID.
+
+    :param db: SQLAlchemy Session object.
+    :param document_id: ID of the document to delete.
+    :return: True if the document was deleted, False otherwise.
+    """
+    db_document = db.query(Document).filter(Document.id == document_id).first()
+    if db_document:
+        # Delete physical file
+        if os.path.exists(db_document.filepath):
+            os.remove(db_document.filepath)
+        db.delete(db_document)
+        db.commit()
+        return True
+    return False
