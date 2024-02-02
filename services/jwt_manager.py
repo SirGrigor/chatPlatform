@@ -31,7 +31,7 @@ def create_refresh_token(db: Session, user_id: int, expires_delta: timedelta = t
     expire = datetime.utcnow() + expires_delta
     token_data = {"sub": str(user_id), "exp": expire}
     token = jwt.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    db_refresh_token = RefreshToken(user_id=user_id, token=token, expires_at=expire)
+    db_refresh_token = RefreshToken(user_id=user_id, token=token, expires_at=expire, created_at=datetime.utcnow(), user_type="admin")
     db.add(db_refresh_token)
     db.commit()
     db.refresh(db_refresh_token)

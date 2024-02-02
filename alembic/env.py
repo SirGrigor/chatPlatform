@@ -6,7 +6,8 @@ import os
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 from db.base_class import Base  # Import Base from the correct module
-from db.models import admin, external_user, message, chat_session, course, document, message, refresh_token
+from db.models import (admin, external_user, message, chat_session, course, document, message, refresh_token,
+                       user_course_association)
 
 # Correctly retrieve the DATABASE_URL from the environment variables
 database_url = os.getenv("DATABASE_URL")

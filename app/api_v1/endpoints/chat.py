@@ -5,7 +5,7 @@ from jose import JWTError
 from sqlalchemy.orm import Session
 from starlette.websockets import WebSocketDisconnect
 
-from db.models.admin import User
+from db.models.external_user import ExternalUser
 from db.session import get_db
 from schemas.chat import ChatMessageOut
 from typing import List
@@ -18,14 +18,14 @@ router = APIRouter()
 active_connections: List[WebSocket] = []
 
 
-async def get_current_user(websocket: WebSocket, token: str = None, db: Session = Depends(get_db)) -> User:
+async def get_current_user(websocket: WebSocket, token: str = None, db: Session = Depends(get_db)) -> ExternalUser:
     if token is None:
         await websocket.close(code=4001)
         raise HTTPException(status_code=400, detail="Missing token")
     try:
         payload = verify_token(token)
         user_id = payload.get("user_id")
-        user = db.query(User).filter(User.id == user_id).first()
+        user = db.query(ExternalUser).filter(ExternalUser.id == user_id).first()
         if user is None:
             await websocket.close(code=4002)
             raise HTTPException(status_code=404, detail="User not found")
@@ -35,7 +35,7 @@ async def get_current_user(websocket: WebSocket, token: str = None, db: Session 
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-async def connect(websocket: WebSocket, user: User):
+async def connect(websocket: WebSocket, user: ExternalUser):
     await websocket.accept()
     active_connections.append(websocket)
 

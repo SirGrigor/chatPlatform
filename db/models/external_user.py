@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import relationship
 
 from db.base_class import Base
+from db.models.user_course_association import user_course_association
 
 
 class ExternalUser(Base):
@@ -9,9 +10,8 @@ class ExternalUser(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(255), nullable=False)
-    course_id = Column(Integer, ForeignKey('courses.id'), nullable=False)
     created_at = Column(TIMESTAMP, nullable=False)
-    updated_at = Column(TIMESTAMP, nullable=True)
+    updated_at = Column(TIMESTAMP)
 
-    course = relationship("Course", backref="external_users")
-    chat_sessions = relationship("ChatSession", backref="external_user")
+    # Many-to-many relationship with Course
+    courses = relationship("Course", secondary=user_course_association, back_populates="external_users")
