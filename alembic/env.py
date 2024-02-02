@@ -2,6 +2,7 @@ from logging.config import fileConfig
 import os
 from sqlalchemy import engine_from_config, pool
 from alembic import context
+from db import base_class as Base
 
 # Correctly retrieve the DATABASE_URL from the environment variables
 database_url = os.getenv("DATABASE_URL")
@@ -12,7 +13,8 @@ config = context.config
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 
-target_metadata = None
+fileConfig(config.config_file_name)
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
