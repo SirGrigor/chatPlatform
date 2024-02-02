@@ -61,7 +61,6 @@ Project structure:
 
 Entity-Relationship Diagram:
 ```
-GPT
 Based on the updated project structure incorporating refresh tokens and JWT management for user authentication and WebSocket communication, here is a detailed entity map outlining each entity, its fields, and the relationships between them:
 
 Entity Map
