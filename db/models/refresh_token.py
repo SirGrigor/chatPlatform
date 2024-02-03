@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, TIMESTAMP
 
 from db.base_class import Base
 
+
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
