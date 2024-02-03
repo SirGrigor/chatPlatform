@@ -28,7 +28,8 @@ def get_external_access_token(email: str, password: str, db: Session = Depends(g
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
     external_token = create_external_refresh_token(db=db, admin_id=user.id)
+    external_token_string = external_token.token
     return {
-        "access_token": external_token.token,
-        "token_type": "bearer"
+        "access_token": external_token_string,
+        "token_type": "websocket"
     }

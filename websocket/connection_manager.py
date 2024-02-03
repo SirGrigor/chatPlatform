@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime
 import aio_pika
 from fastapi import WebSocket
@@ -7,6 +8,7 @@ from typing import Dict, Set
 
 class ConnectionManager:
     def __init__(self, rabbitmq_url: str):
+        logging.info(f"ConnectionManager initialized with RabbitMQ URL: {rabbitmq_url}")
         self.rabbitmq_url = rabbitmq_url
         self.rabbitmq_connection = None
         self.channel = None
@@ -14,11 +16,13 @@ class ConnectionManager:
         self.active_connections: Dict[int, Set[WebSocket]] = {}
 
     async def connect_to_rabbitmq(self):
+        logging.info("Connecting to RabbitMQ")
         if not self.rabbitmq_connection:
             self.rabbitmq_connection = await aio_pika.connect_robust(self.rabbitmq_url)
             self.channel = await self.rabbitmq_connection.channel()
 
     async def subscribe_to_course(self, course_id: int, websocket: WebSocket):
+        logging.info(f"WebSocket connection for course ID {course_id}")
         if course_id not in self.active_connections:
             self.active_connections[course_id] = set()
             # Subscribe to RabbitMQ queue for the course
@@ -26,6 +30,7 @@ class ConnectionManager:
         self.active_connections[course_id].add(websocket)
 
     async def setup_rabbitmq_subscription(self, course_id: int):
+        logging.info(f"Setting up RabbitMQ subscription for course ID {course_id}")
         # Ensure connection and channel are established
         await self.connect_to_rabbitmq()
         queue_name = f'course_chat_{course_id}'
@@ -38,11 +43,13 @@ class ConnectionManager:
                 await self.dispatch_message(course_id, message.body.decode())
 
     async def dispatch_message(self, course_id: int, message: str):
+        logging.info(f"Dispatching message to course ID {course_id}")
         if course_id in self.active_connections:
             for websocket in self.active_connections[course_id]:
                 await websocket.send_text(message)
 
     async def disconnect(self, websocket: WebSocket, course_id: int):
+        logging.info(f"Disconnecting WebSocket for course ID {course_id}")
         if course_id in self.active_connections and websocket in self.active_connections[course_id]:
             self.active_connections[course_id].remove(websocket)
             if not self.active_connections[course_id]:
@@ -50,6 +57,7 @@ class ConnectionManager:
                 # Optionally, unsubscribe from the RabbitMQ queue if no more listeners
 
     async def send_message(self, course_id: int, message: str, sender: str):
+        logging.info(f"Sending message to course ID {course_id}")
         formatted_message = self.format_message(message, sender)
         # Ensure connection and channel are established
         await self.connect_to_rabbitmq()

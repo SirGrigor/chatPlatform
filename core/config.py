@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str  # SQLAlchemy database URL
     RABBITMQ_URL: str  # RabbitMQ connection URL
+    SSL_CERT_FILE: str  # SSL certificate path
+    SSL_KEY_FILE: str  # SSL key path
 
     class Config:
         env_file = ".env"
@@ -16,3 +18,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+

@@ -29,7 +29,12 @@
         const wsUrl = document.getElementById("wsUrl").value;
         const token = document.getElementById("wsToken").value;
         const fullUrl = wsUrl + token;
-        ws = new WebSocket(fullUrl);
+
+        const headers = {
+            Authorization: "Bearer " + token,
+        };
+
+        ws = new WebSocket(fullUrl, [], headers);
 
         ws.onopen = function() {
             console.log("Connected to the chat server.");

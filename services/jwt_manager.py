@@ -58,7 +58,7 @@ def create_external_refresh_token(db: Session, admin_id: int,
 async def verify_external_token(token: str, db: Session):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        logger.info(f"Payload: {payload}")
+        logger.info(f"JWT Payload: {payload}")  # Log the payload for debugging
         admin_id = payload.get("admin_id")
         user_type = payload.get("type")
         if user_type != "external_admin":
