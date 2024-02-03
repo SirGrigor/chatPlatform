@@ -1,11 +1,19 @@
 from fastapi import FastAPI
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api_v1.api import api_router
 from core.config import settings
 from websocket.connection_manager import ConnectionManager
 
 app = FastAPI()
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 manager = ConnectionManager(rabbitmq_url=settings.RABBITMQ_URL)
 
 

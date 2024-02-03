@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import HTTPException
+from fastapi.logger import logger
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 
@@ -43,7 +44,8 @@ def create_refresh_token(db: Session, user_id: int, expires_delta: timedelta = t
 def create_external_refresh_token(db: Session, admin_id: int,
                                   expires_delta: timedelta = timedelta(days=7)) -> RefreshToken:
     expire = datetime.utcnow() + expires_delta
-    token_data = {"admin_id": str(admin_id), "exp": expire, "type": "external_admin"}
+    token_data = {"admin_id": str(admin_id), "exp": expire, "type": "external_admin", "course_name": 37,
+                  "user_name": "grigorjev.w@gmail.com"}
     token = jwt.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     db_refresh_token = RefreshToken(user_id=admin_id, token=token, expires_at=expire, created_at=datetime.utcnow(),
                                     user_type="external_admin")
@@ -53,17 +55,14 @@ def create_external_refresh_token(db: Session, admin_id: int,
     return db_refresh_token
 
 
-def verify_external_token(token: str, db: Session):
+async def verify_external_token(token: str, db: Session):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        logger.info(f"Payload: {payload}")
         admin_id = payload.get("admin_id")
-        if payload.get("type") != "external_admin":
+        user_type = payload.get("type")
+        if user_type != "external_admin":
             raise HTTPException(status_code=401, detail="Invalid token type")
-        # Optionally, verify the token exists in the database and hasn't expired
-        token_data = db.query(RefreshToken).filter(RefreshToken.token == token,
-                                                   RefreshToken.user_id == admin_id).first()
-        if not token_data:
-            raise HTTPException(status_code=401, detail="Token not found")
-        return token_data
+        return admin_id, user_type
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")

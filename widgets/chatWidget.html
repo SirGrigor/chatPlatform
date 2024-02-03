@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Chat Widget</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #chat { border: 1px solid #ccc; padding: 10px; margin: 10px 0; height: 300px; overflow-y: auto; }
+        #message { width: calc(100% - 90px); margin-right: 5px; }
+        button, #wsConnect { margin-top: 10px; }
+    </style>
+</head>
+<body>
+<label for="wsUrl">WebSocket URL:</label>
+<input type="text" id="wsUrl" placeholder="ws://localhost:8000/ws/chat/" style="margin-bottom: 5px; width: calc(100% - 2em);" value="ws://localhost:8000/ws/chat/">
+<label for="wsToken">Token:</label>
+<input type="text" id="wsToken" placeholder="Enter token here" style="margin-bottom: 5px; width: calc(100% - 2em);">
+<button id="wsConnect" onclick="connectWebSocket()">Connect</button>
+
+<div id="chat"></div>
+<input type="text" id="message" placeholder="Type a message..." disabled>
+<button onclick="sendMessage()" disabled>Send</button>
+
+<script>
+    let ws = null;
+
+    function connectWebSocket() {
+        const wsUrl = document.getElementById("wsUrl").value;
+        const token = document.getElementById("wsToken").value;
+        const fullUrl = wsUrl + token;
+        ws = new WebSocket(fullUrl);
+
+        ws.onopen = function() {
+            console.log("Connected to the chat server.");
+            document.getElementById("message").disabled = false;
+            document.querySelector("button[onclick='sendMessage()']").disabled = false;
+            document.getElementById("wsConnect").disabled = true;
+        };
+
+        ws.onmessage = function(event) {
+            const chat = document.getElementById('chat');
+            const message = JSON.parse(event.data);
+            const messageElement = document.createElement('div');
+            messageElement.textContent = "Received: " + message.message;
+            chat.appendChild(messageElement);
+        };
+
+        ws.onclose = function(event) {
+            console.log("Disconnected from chat server.", event.reason);
+            document.getElementById("message").disabled = true;
+            document.querySelector("button[onclick='sendMessage()']").disabled = true;
+            document.getElementById("wsConnect").disabled = false;
+        };
+
+        ws.onerror = function(error) {
+            console.log("WebSocket error: " + error);
+            document.getElementById("message").disabled = true;
+            document.querySelector("button[onclick='sendMessage()']").disabled = true;
+            document.getElementById("wsConnect").disabled = false;
+        };
+    }
+
+    function sendMessage() {
+        const inputElement = document.getElementById('message');
+        const message = inputElement.value;
+        ws.send(JSON.stringify({ message: message }));
+        inputElement.value = ''; // Clear input after sending
+    }
+</script>
+</body>
+</html>

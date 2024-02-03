@@ -11,12 +11,14 @@ services:
     environment:
       - RABBITMQ_URL=amqp://user:password@rabbitmq/%2F
       - DATABASE_URL=postgresql://postgres:postgres@db/mydatabase
-      - DOCUMENT_STORAGE_PATH=/app/documents # Add this line
+      - DOCUMENT_STORAGE_PATH=/app/documents
     volumes:
       - .:/app
-      - document_storage:/app/documents # Add this line for persistent document storage
+      - document_storage:/app/documents
     entrypoint: /app/entrypoint.sh
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    networks:
+      - app_network
 
   rabbitmq:
     image: "rabbitmq:3-management"
@@ -24,8 +26,10 @@ services:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
     ports:
-      - "5672:5672" # RabbitMQ
-      - "15672:15672" # Management console
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app_network
 
   alembic:
     build: .
@@ -34,6 +38,8 @@ services:
       - db
     volumes:
       - .:/app
+    networks:
+      - app_network
 
   db:
     image: postgres:13
@@ -45,8 +51,14 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
 
 volumes:
   postgres_data:
   document_storage:
+
+networks:
+  app_network:
+    driver: bridge
 

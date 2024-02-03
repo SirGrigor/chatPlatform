@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
 from db.session import get_db
 from schemas.auth import Token, Login
-from services.user_service import authenticate_user, create_user
 from services.jwt_manager import create_access_token, create_external_refresh_token
+from services.user_service import authenticate_user
 
 router = APIRouter()
 
@@ -26,7 +27,6 @@ def get_external_access_token(email: str, password: str, db: Session = Depends(g
     user = authenticate_user(db, email, password)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
-
     external_token = create_external_refresh_token(db=db, admin_id=user.id)
     return {
         "access_token": external_token.token,
