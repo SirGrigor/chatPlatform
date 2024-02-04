@@ -2,11 +2,14 @@ import logging
 from typing import Optional
 
 import openai
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from core.config import settings
 from db.models.gpt_preset import GptPreset
 from schemas.gpt_model import GptModelName
+
+openai_service = openai
 
 
 class GptChatService:
@@ -58,29 +61,28 @@ class GptChatService:
             logging.error(f"Failed to read context file {filepath}: {e}")
             return ""
 
-    async def ask_gpt(self, db, preset_id: int, initial_message: str) -> str:
-        """
-        Sends a prompt to the GPT model and returns the response.
-        """
+    async def ask_gpt(self, db: Session, preset_id: int, initial_message: str) -> str:
         preset = self.get_gpt_preset(db, preset_id)
+        if not preset:
+            raise ValueError("Preset not found")
 
         try:
-            response = openai.Completion.create(
-                engine=preset.model,
-                context=preset.context,
-                prompt=initial_message,
-                max_tokens=preset.max_tokens,
+            response = openai_service.chat.completions.create(
+                model=preset.model,  # Ensure this is a valid GPT-3.5-turbo or similar model
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": initial_message}
+                ],
                 temperature=preset.temperature,
-                n=1,
-                stop=None,
-                top_p=1.0,
-                frequency_penalty=0.0,
-                presence_penalty=0.0,
+                max_tokens=preset.max_tokens,
             )
-            return response.choices[0].text.strip()
+            if response and response['choices']:
+                return response['choices'][0]['message']['content'].strip()
+            else:
+                return "Failed to get a valid response from OpenAI."
         except openai.OpenAIError as e:
             logging.error(f"OpenAI API error: {e}")
-            return "An error occurred while processing your request. Please try again."
+            raise HTTPException(status_code=500, detail="OpenAI API error.")
         except Exception as e:
             logging.error(f"Unexpected error: {e}")
-            return "An unexpected error occurred. Please try again."
+            raise HTTPException(status_code=500, detail="An unexpected error occurred.")
