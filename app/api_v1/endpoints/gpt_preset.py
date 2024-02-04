@@ -23,8 +23,6 @@ def create_preset(preset_data: GptPresetCreate, db: Session = Depends(get_db)):
 
 @router.post("/chat/", response_model=ChatResponse)
 async def start_chat(chat_request: ChatRequest, db: Session = Depends(get_db)):
-    await gpt_chat_service.ask_gpt(db, chat_request.preset_id,
-                                   chat_request.initial_message)
     try:
         response_message = await gpt_chat_service.ask_gpt(db, chat_request.preset_id,
                                                           chat_request.initial_message)

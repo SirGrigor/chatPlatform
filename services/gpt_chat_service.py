@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+import openai
 from openai import OpenAI
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -42,8 +43,8 @@ class GptChatService:
         model = GptModelName[
             preset.model].value if preset.model in GptModelName._value2member_map_ else GptModelName.DAVINCI.value
         context = self._get_context_from_file(context_file) if context_file else None
-
-        return await self.ask_gpt(prompt, model, preset.max_tokens, preset.temperature, context)
+        response = await self.ask_gpt(prompt, model, preset.max_tokens, preset.temperature, context)
+        return response
 
     # Include the rest of the GptChatService methods here...
 
@@ -76,9 +77,10 @@ class GptChatService:
                     temperature=preset.temperature,
                     max_tokens=preset.max_tokens,
                 )
-                # Adjusting to access 'choices' correctly based on OpenAI's API structure
-                if 'choices' in response and response['choices']:
-                    return response['choices'][0]['message']['content'].strip()
+                # Correctly extracting the message content from the first choice
+                if response.choices and response.choices[0].message:
+                    message_content = response.choices[0].message.content
+                    return message_content
                 else:
                     return "Failed to get a valid response from OpenAI."
             else:
