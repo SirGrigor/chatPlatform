@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, Tuple, Any
 
 import openai
 from openai import OpenAI
@@ -34,7 +34,7 @@ class GptChatService:
         return db.query(GptPreset).filter(GptPreset.id == preset_id).first()
 
     async def ask_gpt_with_preset(self, db: Session, preset_id: int, prompt: str,
-                                  context_file: Optional[str] = None) -> str:
+                                  context_file: Optional[str] = None) -> Tuple[Optional[str], str]:
         preset = self.get_gpt_preset(db, preset_id)
         if not preset:
             raise ValueError("Preset not found")
@@ -60,7 +60,7 @@ class GptChatService:
             logging.error(f"Failed to read context file {filepath}: {e}")
             return ""
 
-    async def ask_gpt(self, db: Session, preset_id: int, initial_message: str) -> str:
+    async def ask_gpt(self, db: Session, preset_id: int, initial_message: str) -> Tuple[Optional[str], str]:
         preset = self.get_gpt_preset(db, preset_id)
         if not preset:
             raise ValueError("Preset not found")
@@ -80,7 +80,7 @@ class GptChatService:
                 # Correctly extracting the message content from the first choice
                 if response.choices and response.choices[0].message:
                     message_content = response.choices[0].message.content
-                    return message_content
+                    return message_content, response.id
                 else:
                     return "Failed to get a valid response from OpenAI."
             else:

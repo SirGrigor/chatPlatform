@@ -3,10 +3,21 @@ from enum import Enum
 
 
 class GptModelName(Enum):
-    DAVINCI = "text-davinci-003"
-    CURIE = "text-curie-001"
-    BABBAGE = "text-babbage-001"
-    ADA = "text-ada-001"
+    GPT4_0125_PREVIEW = "gpt-4-0125-preview"
+    GPT4_TURBO_PREVIEW = "gpt-4-turbo-preview"
+    GPT4_1106_PREVIEW = "gpt-4-1106-preview"
+    GPT4_VISION_PREVIEW = "gpt-4-vision-preview"
+    GPT4 = "gpt-4"
+    GPT4_0613 = "gpt-4-0613"
+    GPT4_32K = "gpt-4-32k"
+    GPT4_32K_0613 = "gpt-4-32k-0613"
+    GPT3_5_TURBO_0125 = "gpt-3.5-turbo-0125"
+    GPT3_5_TURBO = "gpt-3.5-turbo"
+    GPT3_5_TURBO_1106 = "gpt-3.5-turbo-1106"
+    GPT3_5_TURBO_INSTRUCT = "gpt-3.5-turbo-instruct"
+    GPT3_5_TURBO_16K = "gpt-3.5-turbo-16k"
+    GPT3_5_TURBO_0613 = "gpt-3.5-turbo-0613"
+    GPT3_5_TURBO_16K_0613 = "gpt-3.5-turbo-16k-0613"
 
 
 class GptPresetCreate(BaseModel):
@@ -36,24 +47,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     message: str
-
-
-class GptModelName(Enum):
-    GPT4_0125_PREVIEW = "gpt-4-0125-preview"
-    GPT4_TURBO_PREVIEW = "gpt-4-turbo-preview"
-    GPT4_1106_PREVIEW = "gpt-4-1106-preview"
-    GPT4_VISION_PREVIEW = "gpt-4-vision-preview"
-    GPT4 = "gpt-4"
-    GPT4_0613 = "gpt-4-0613"
-    GPT4_32K = "gpt-4-32k"
-    GPT4_32K_0613 = "gpt-4-32k-0613"
-    GPT3_5_TURBO_0125 = "gpt-3.5-turbo-0125"
-    GPT3_5_TURBO = "gpt-3.5-turbo"
-    GPT3_5_TURBO_1106 = "gpt-3.5-turbo-1106"
-    GPT3_5_TURBO_INSTRUCT = "gpt-3.5-turbo-instruct"
-    GPT3_5_TURBO_16K = "gpt-3.5-turbo-16k"
-    GPT3_5_TURBO_0613 = "gpt-3.5-turbo-0613"
-    GPT3_5_TURBO_16K_0613 = "gpt-3.5-turbo-16k-0613"
+    response_id: str
 
 
 class GptModelListResponse(BaseModel):
