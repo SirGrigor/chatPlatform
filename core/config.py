@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # Token expiration time
-
+    OPENAPI_KEY: str
     DATABASE_URL: str  # SQLAlchemy database URL
     RABBITMQ_URL: str  # RabbitMQ connection URL
     SSL_CERT_FILE: str  # SSL certificate path
