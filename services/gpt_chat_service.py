@@ -60,14 +60,21 @@ class GptChatService:
             logging.error(f"Failed to read context file {filepath}: {e}")
             return ""
 
+    def is_chat_model(self, model_name: str) -> bool:
+        """
+        Check if the model is a chat model based on naming conventions.
+        """
+        # Adjust the logic as needed based on model naming conventions
+        chat_models = {model.value for model in GptModelName}
+        return model_name in chat_models
+
     async def ask_gpt(self, db: Session, preset_id: int, initial_message: str) -> Tuple[Optional[str], str]:
         preset = self.get_gpt_preset(db, preset_id)
         if not preset:
             raise ValueError("Preset not found")
 
-        is_chat_model = "gpt-3.5-turbo" in preset.model or "gpt-4" in preset.model
-        try:
-            if is_chat_model:
+        if self.is_chat_model(preset.model):
+            try:
                 response = self.client.chat.completions.create(
                     model=preset.model,
                     messages=[
@@ -77,15 +84,14 @@ class GptChatService:
                     temperature=preset.temperature,
                     max_tokens=preset.max_tokens,
                 )
-                # Correctly extracting the message content from the first choice
+                # Extract and return the message content correctly
                 if response.choices and response.choices[0].message:
                     message_content = response.choices[0].message.content
                     return message_content, response.id
                 else:
-                    return "Failed to get a valid response from OpenAI."
-            else:
-                # Handle the case where the model is not a chat model, if applicable
-                return "The specified model is not supported for chat completions."
-        except Exception as e:
-            logging.error(f"OpenAI API error: {e}")
-            raise HTTPException(status_code=500, detail="OpenAI API error.")
+                    return None, "Failed to get a valid response from OpenAI."
+            except Exception as e:
+                logging.error(f"OpenAI API error: {e}")
+                raise HTTPException(status_code=500, detail="OpenAI API error.")
+        else:
+            return None, "The specified model is not supported for chat completions."
