@@ -77,3 +77,21 @@ class ConnectionManager:
             "timestamp": datetime.utcnow().isoformat()
         }
         return json.dumps(message_data)
+
+    async def publish_message(self, course_id: str, user_message: str, gpt_response: str):
+        # Ensure connection to RabbitMQ
+        await self.connect_to_rabbitmq()
+
+        # Construct the message for RabbitMQ
+        message_data = json.dumps({
+            "course_id": course_id,
+            "user_message": user_message,
+            "gpt_response": gpt_response,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+        # Publish the message to a specific RabbitMQ exchange and routing key
+        await self.channel.default_exchange.publish(
+            aio_pika.Message(body=message_data.encode()),
+            routing_key=f'course_chat_{course_id}'
+        )

@@ -94,3 +94,6 @@ class GptChatService:
                 raise HTTPException(status_code=500, detail="OpenAI API error.")
         else:
             return None, "The specified model is not supported for chat completions."
+
+    async def find_gpt_preset_by_course_id(self, db: Session, course_id: int) -> GptPreset:
+        return db.query(GptPreset).filter(GptPreset.course_id == course_id).first()

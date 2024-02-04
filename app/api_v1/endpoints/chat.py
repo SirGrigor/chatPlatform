@@ -9,11 +9,14 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from db.models.external_user import ExternalUser
 from db.session import get_db
+from services import gpt_chat_service
+from services.association_service import AssociationService
 from services.course_service import get_course_id_by_name
+from services.gpt_chat_service import GptChatService
 from services.jwt_manager import verify_external_token
 from websocket import connection_manager
-from services.association_service import AssociationService
 
+gpt_chat_service = GptChatService()
 router = APIRouter()
 connection_manager = connection_manager.ConnectionManager(settings.RABBITMQ_URL)
 active_connections: List[WebSocket] = []
@@ -26,7 +29,7 @@ async def get_or_create_external_user(db: Session, username: str, course_id: int
     if not user:
         # Create a new ExternalUser instance
         user = ExternalUser(username=username, created_at=datetime.datetime.now(),
-                            user_type="external")  # Should this be "external" instead of "eternal"?
+                            user_type="external")
         db.add(user)
         db.commit()
         # Use the instance to call the method
@@ -38,7 +41,6 @@ async def get_or_create_external_user(db: Session, username: str, course_id: int
             association_service.add_association(user_id=user.id, course_id=course_id)
 
     return user
-
 
 
 async def connect(websocket: WebSocket, user: ExternalUser):
@@ -78,8 +80,9 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
             return
 
         # Use the extracted data
-        course_id = await get_course_id_by_name(db, course_name)  # You need to implement this
-        await get_or_create_external_user(db, username, course_id)
+        course_id = await get_course_id_by_name(db, course_name)
+        preset = await gpt_chat_service.find_gpt_preset_by_course_id(db, course_id)
+        user = await get_or_create_external_user(db, username, course_id)
         # Assuming course_id is needed and can be derived from course_name in your application
 
         if not course_id:
@@ -87,18 +90,23 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
             await websocket.close(code=4000)  # Use an appropriate close code
             return
 
-        await connection_manager.subscribe_to_course(course_id, websocket)
+        await connect(websocket, user)
+        try:
+            while True:
+                text_data = await websocket.receive_text()
+                data_json = json.loads(text_data)
+                message = data_json['message']
 
-        while True:
-            # Now handle other messages as usual
-            data = await websocket.receive_text()
-            data_json = json.loads(data)
-            # Simplified message handling and dispatch
-            await connection_manager.send_message(course_id, data_json['message'], admin_id)
+                # Use GptChatService to get response from GPT
+                response_message, response_id = await gpt_chat_service.ask_gpt(preset, message)
+                print(f"Received message: {message}")
+                # Send GPT response back to the client through WebSocket
+                await websocket.send_text(json.dumps({"message": response_message}))
 
+                # Optionally, publish the original message and GPT response to RabbitMQ for load balancing and further processing
+                await connection_manager.publish_message(course_id, message, response_message)
+
+        except WebSocketDisconnect:
+            disconnect(websocket)
     except WebSocketDisconnect:
-        # Make sure to use course_id from the user object or another source if needed
-        connection_manager.disconnect(websocket, course_id)
-    except Exception as e:
-        logging.error(f"Error in WebSocket connection: {e}")
-        await websocket.close(code=1011)
+        disconnect(websocket)
