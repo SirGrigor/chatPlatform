@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-import openai
+from openai import OpenAI
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -9,12 +9,10 @@ from core.config import settings
 from db.models.gpt_preset import GptPreset
 from schemas.gpt_model import GptModelName
 
-openai_service = openai
-
 
 class GptChatService:
     def __init__(self):
-        openai.api_key = settings.OPENAPI_KEY
+        self.client = OpenAI(api_key=settings.OPENAPI_KEY)
 
     @staticmethod
     def create_gpt_preset(db: Session, preset_data: dict) -> GptPreset:
@@ -66,23 +64,26 @@ class GptChatService:
         if not preset:
             raise ValueError("Preset not found")
 
+        is_chat_model = "gpt-3.5-turbo" in preset.model or "gpt-4" in preset.model
         try:
-            response = openai_service.chat.completions.create(
-                model=preset.model,  # Ensure this is a valid GPT-3.5-turbo or similar model
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": initial_message}
-                ],
-                temperature=preset.temperature,
-                max_tokens=preset.max_tokens,
-            )
-            if response and response['choices']:
-                return response['choices'][0]['message']['content'].strip()
+            if is_chat_model:
+                response = self.client.chat.completions.create(
+                    model=preset.model,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": initial_message}
+                    ],
+                    temperature=preset.temperature,
+                    max_tokens=preset.max_tokens,
+                )
+                # Adjusting to access 'choices' correctly based on OpenAI's API structure
+                if 'choices' in response and response['choices']:
+                    return response['choices'][0]['message']['content'].strip()
+                else:
+                    return "Failed to get a valid response from OpenAI."
             else:
-                return "Failed to get a valid response from OpenAI."
-        except openai.OpenAIError as e:
+                # Handle the case where the model is not a chat model, if applicable
+                return "The specified model is not supported for chat completions."
+        except Exception as e:
             logging.error(f"OpenAI API error: {e}")
             raise HTTPException(status_code=500, detail="OpenAI API error.")
-        except Exception as e:
-            logging.error(f"Unexpected error: {e}")
-            raise HTTPException(status_code=500, detail="An unexpected error occurred.")
