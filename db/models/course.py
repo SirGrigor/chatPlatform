@@ -1,8 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, func
-from sqlalchemy.orm import relationship
 
 from db.base_class import Base
-from db.models.user_course_association import user_course_association
 
 
 class Course(Base):
@@ -15,6 +13,4 @@ class Course(Base):
     created_at = Column(TIMESTAMP, nullable=False, server_default=func.now())
     updated_at = Column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
 
-    # Many-to-many relationship with ExternalUser
-    external_users = relationship("ExternalUser", secondary=user_course_association, back_populates="courses")
 

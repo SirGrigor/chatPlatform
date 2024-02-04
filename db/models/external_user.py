@@ -1,8 +1,6 @@
-from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, TIMESTAMP
 
 from db.base_class import Base
-from db.models.user_course_association import user_course_association
 
 
 class ExternalUser(Base):
@@ -13,5 +11,3 @@ class ExternalUser(Base):
     created_at = Column(TIMESTAMP, nullable=False)
     updated_at = Column(TIMESTAMP)
     user_type = Column(String(255), nullable=False, default="external")
-    # Many-to-many relationship with Course
-    courses = relationship("Course", secondary=user_course_association, back_populates="external_users")

@@ -12,21 +12,33 @@ from db.session import get_db
 from services.course_service import get_course_id_by_name
 from services.jwt_manager import verify_external_token
 from websocket import connection_manager
+from services.association_service import AssociationService
 
 router = APIRouter()
 connection_manager = connection_manager.ConnectionManager(settings.RABBITMQ_URL)
 active_connections: List[WebSocket] = []
 
 
-async def get_or_create_external_user(db: Session, username: str) -> ExternalUser:
+async def get_or_create_external_user(db: Session, username: str, course_id: int) -> ExternalUser:
     user = db.query(ExternalUser).filter_by(username=username).first()
+    association_service = AssociationService(db_session=db)  # Instantiate the service
+
     if not user:
         # Create a new ExternalUser instance
         user = ExternalUser(username=username, created_at=datetime.datetime.now(),
-                            user_type="eternal")
+                            user_type="external")  # Should this be "external" instead of "eternal"?
         db.add(user)
         db.commit()
+        # Use the instance to call the method
+        association_service.add_association(user_id=user.id, course_id=course_id)
+
+    else:
+        # Use the instance to call the method
+        if not association_service.check_association(user_id=user.id, course_id=course_id):
+            association_service.add_association(user_id=user.id, course_id=course_id)
+
     return user
+
 
 
 async def connect(websocket: WebSocket, user: ExternalUser):
@@ -66,9 +78,9 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
             return
 
         # Use the extracted data
-        user = await get_or_create_external_user(db, username)
-        # Assuming course_id is needed and can be derived from course_name in your application
         course_id = await get_course_id_by_name(db, course_name)  # You need to implement this
+        await get_or_create_external_user(db, username, course_id)
+        # Assuming course_id is needed and can be derived from course_name in your application
 
         if not course_id:
             logging.error("Invalid course_name provided")
