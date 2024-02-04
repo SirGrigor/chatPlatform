@@ -27,3 +27,12 @@ class GptPresetResponseSchema(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class ChatRequest(BaseModel):
+    preset_id: int
+    initial_message: str
+
+
+class ChatResponse(BaseModel):
+    message: str

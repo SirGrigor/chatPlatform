@@ -1,5 +1,4 @@
 import logging
-from enum import Enum
 from typing import Optional
 
 import openai
@@ -12,7 +11,7 @@ from schemas.gpt_model import GptModelName
 
 class GptChatService:
     def __init__(self):
-        openai.api_key = settings.OPENAI_API_KEY
+        openai.api_key = settings.OPENAPI_KEY
 
     @staticmethod
     def create_gpt_preset(db: Session, preset_data: dict) -> GptPreset:
@@ -58,3 +57,30 @@ class GptChatService:
         except Exception as e:
             logging.error(f"Failed to read context file {filepath}: {e}")
             return ""
+
+    async def ask_gpt(self, db, preset_id: int, initial_message: str) -> str:
+        """
+        Sends a prompt to the GPT model and returns the response.
+        """
+        preset = self.get_gpt_preset(db, preset_id)
+
+        try:
+            response = openai.Completion.create(
+                engine=preset.model,
+                context=preset.context,
+                prompt=initial_message,
+                max_tokens=preset.max_tokens,
+                temperature=preset.temperature,
+                n=1,
+                stop=None,
+                top_p=1.0,
+                frequency_penalty=0.0,
+                presence_penalty=0.0,
+            )
+            return response.choices[0].text.strip()
+        except openai.OpenAIError as e:
+            logging.error(f"OpenAI API error: {e}")
+            return "An error occurred while processing your request. Please try again."
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+            return "An unexpected error occurred. Please try again."
