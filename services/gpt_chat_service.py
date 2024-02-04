@@ -1,9 +1,8 @@
 import logging
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple
 
-import openai
-from openai import OpenAI
 from fastapi import HTTPException
+from openai import OpenAI
 from sqlalchemy.orm import Session
 
 from core.config import settings
