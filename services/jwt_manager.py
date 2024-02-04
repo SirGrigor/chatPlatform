@@ -44,8 +44,7 @@ def create_refresh_token(db: Session, user_id: int, expires_delta: timedelta = t
 def create_external_refresh_token(db: Session, admin_id: int,
                                   expires_delta: timedelta = timedelta(days=7)) -> RefreshToken:
     expire = datetime.utcnow() + expires_delta
-    token_data = {"admin_id": str(admin_id), "exp": expire, "type": "external_admin", "course_name": 37,
-                  "user_name": "grigorjev.w@gmail.com"}
+    token_data = {"admin_id": str(admin_id), "exp": expire, "type": "external_admin"}
     token = jwt.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     db_refresh_token = RefreshToken(user_id=admin_id, token=token, expires_at=expire, created_at=datetime.utcnow(),
                                     user_type="external_admin")

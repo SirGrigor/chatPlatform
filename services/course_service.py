@@ -48,3 +48,9 @@ def delete_course(db: Session, course_id: int) -> bool:
         db.commit()
         return True
     return False
+
+async def get_course_id_by_name(db: Session, course_name: str) -> int:
+    course = db.query(Course).filter(Course.title == course_name).first()
+    if course:
+        return course.id
+    return 0
