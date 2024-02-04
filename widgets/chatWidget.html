@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Chat Widget</title>
+    <title>Chat with GPT</title>
     <style>
         body { font-family: Arial, sans-serif; }
         #chat { border: 1px solid #ccc; padding: 10px; margin: 10px 0; height: 300px; overflow-y: auto; }
+        input, button { margin-top: 5px; }
         #message { width: calc(100% - 90px); margin-right: 5px; }
-        button, #wsConnect { margin-top: 10px; }
+        button { margin-left: 5px; }
     </style>
 </head>
 <body>
 <label for="wsUrl">WebSocket URL:</label>
-<input type="text" id="wsUrl" placeholder="ws://localhost:8200/ws/chat/" style="margin-bottom: 5px; width: calc(100% - 2em);" value="ws://localhost:8000/ws/chat/">
-<label for="wsToken">Token:</label>
-<input type="text" id="wsToken" placeholder="Enter token here" style="margin-bottom: 5px; width: calc(100% - 2em);">
+<input type="text" id="wsUrl" placeholder="ws://localhost:8000/chat/ws/" style="margin-bottom: 5px; width: calc(100% - 2em);" value="wss://localhost:8000/chat/ws/{token}/">
+<label for="courseName">Course Name:</label>
+<input type="text" id="courseName" placeholder="Enter course name" style="margin-bottom: 5px; width: calc(100% - 2em);">
+<label for="sender">Sender:</label>
+<input type="text" id="sender" placeholder="Enter sender email" style="margin-bottom: 5px; width: calc(100% - 2em);">
+<label for="username">Username:</label>
+<input type="text" id="username" placeholder="Enter username" style="margin-bottom: 5px; width: calc(100% - 2em);">
 <button id="wsConnect" onclick="connectWebSocket()">Connect</button>
 
 <div id="chat"></div>
@@ -27,14 +32,7 @@
 
     function connectWebSocket() {
         const wsUrl = document.getElementById("wsUrl").value;
-        const token = document.getElementById("wsToken").value;
-        const fullUrl = wsUrl + token;
-
-        const headers = {
-            Authorization: "Bearer " + token,
-        };
-
-        ws = new WebSocket(fullUrl, [], headers);
+        ws = new WebSocket(wsUrl);
 
         ws.onopen = function() {
             console.log("Connected to the chat server.");
@@ -45,9 +43,9 @@
 
         ws.onmessage = function(event) {
             const chat = document.getElementById('chat');
-            const message = JSON.parse(event.data);
+            const data = JSON.parse(event.data);
             const messageElement = document.createElement('div');
-            messageElement.textContent = "Received: " + message.message;
+            messageElement.textContent = "GPT: " + data.message;
             chat.appendChild(messageElement);
         };
 
@@ -60,17 +58,24 @@
 
         ws.onerror = function(error) {
             console.log("WebSocket error: " + error);
-            document.getElementById("message").disabled = true;
-            document.querySelector("button[onclick='sendMessage()']").disabled = true;
-            document.getElementById("wsConnect").disabled = false;
         };
     }
 
     function sendMessage() {
-        const inputElement = document.getElementById('message');
-        const message = inputElement.value;
-        ws.send(JSON.stringify({ message: message }));
-        inputElement.value = ''; // Clear input after sending
+        const message = document.getElementById('message').value;
+        const courseName = document.getElementById('courseName').value;
+        const sender = document.getElementById('sender').value;
+        const username = document.getElementById('username').value;
+
+        const payload = {
+            message: message,
+            course_name: courseName,
+            sender: sender,
+            username: username
+        };
+
+        ws.send(JSON.stringify(payload));
+        document.getElementById('message').value = ''; // Clear input after sending
     }
 </script>
 </body>

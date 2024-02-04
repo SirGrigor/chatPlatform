@@ -63,8 +63,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
             await websocket.close(code=1008)
             return
 
-        await websocket.accept()
-
+        await connect(websocket, admin_id)
         # Receive initial setup message from the client
         setup_data = await websocket.receive_text()
         setup_data_json = json.loads(setup_data)
@@ -90,7 +89,6 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
             await websocket.close(code=4000)  # Use an appropriate close code
             return
 
-        await connect(websocket, user)
         try:
             while True:
                 text_data = await websocket.receive_text()
@@ -99,7 +97,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
 
                 # Use GptChatService to get response from GPT
                 response_message, response_id = await gpt_chat_service.ask_gpt(preset, message)
-                print(f"Received message: {message}")
+                print(f"Received message: {response_message}")
                 # Send GPT response back to the client through WebSocket
                 await websocket.send_text(json.dumps({"message": response_message}))
 
