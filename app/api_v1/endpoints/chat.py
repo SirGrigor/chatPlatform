@@ -80,7 +80,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
 
         # Use the extracted data
         course_id = await get_course_id_by_name(db, course_name)
-        preset = await gpt_chat_service.find_gpt_preset_by_course_id(db, course_id)
+        preset = await gpt_chat_service.get_gpt_preset_by_course_id(db, course_id)
         user = await get_or_create_external_user(db, username, course_id)
         # Assuming course_id is needed and can be derived from course_name in your application
 
@@ -95,7 +95,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
                 data_json = json.loads(text_data)
                 message = data_json['message']
 
-                response_message, response_id = await gpt_chat_service.ask_gpt(db, preset.id, message)
+                response_message, response_id, _ = await gpt_chat_service.ask_gpt(db, preset.id, message, user.id)
                 print(response_message)
                 if response_message:
                     await websocket.send_text(json.dumps({"message": response_message}))

@@ -53,11 +53,13 @@ class GptPresetResponseSchema(BaseModel):
 class ChatRequest(BaseModel):
     preset_id: int
     initial_message: str
+    user_id: int
 
 
 class ChatResponse(BaseModel):
     message: str
     response_id: str
+    user_id: int
 
 
 class GptModelDetailsResponse(BaseModel):

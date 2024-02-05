@@ -24,9 +24,9 @@ def create_preset(preset_data: GptPresetCreate, db: Session = Depends(get_db)):
 @router.post("/chat/", response_model=ChatResponse)
 async def start_chat(chat_request: ChatRequest, db: Session = Depends(get_db)):
     try:
-        response_message, response_id = await gpt_chat_service.ask_gpt(db, chat_request.preset_id,
-                                                                       chat_request.initial_message)
-        return ChatResponse(message=response_message, response_id=response_id)
+        response_message, response_id, user_id = await gpt_chat_service.ask_gpt(db, chat_request.preset_id,
+                                                                       chat_request.initial_message, chat_request.user_id)
+        return ChatResponse(message=response_message, response_id=response_id, user_id=user_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

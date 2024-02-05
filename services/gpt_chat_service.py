@@ -1,11 +1,14 @@
 import logging
+from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
 from fastapi import HTTPException
 from openai import OpenAI
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core.config import settings
+from db.models.chat_session import ChatSession
 from db.models.gpt_preset import GptPreset
 from schemas.gpt_model import GptModelName
 
@@ -32,21 +35,6 @@ class GptChatService:
         """
         return db.query(GptPreset).filter(GptPreset.id == preset_id).first()
 
-    async def ask_gpt_with_preset(self, db: Session, preset_id: int, prompt: str,
-                                  context_file: Optional[str] = None) -> Tuple[Optional[str], str]:
-        preset = self.get_gpt_preset(db, preset_id)
-        if not preset:
-            raise ValueError("Preset not found")
-
-        # Correctly use the model name from the preset
-        model = GptModelName[
-            preset.model].value if preset.model in GptModelName._value2member_map_ else GptModelName.DAVINCI.value
-        context = self._get_context_from_file(context_file) if context_file else None
-        response = await self.ask_gpt(prompt, model, preset.max_tokens, preset.temperature, context)
-        return response
-
-    # Include the rest of the GptChatService methods here...
-
     @staticmethod
     def _get_context_from_file(filepath: str) -> str:
         """
@@ -67,38 +55,60 @@ class GptChatService:
         chat_models = {model.value for model in GptModelName}
         return model_name in chat_models
 
-    async def ask_gpt(self, db: Session, preset_id: int, initial_message: str) -> Tuple[Optional[str], str]:
-        preset = self.get_gpt_preset(db, preset_id)
-        if not preset:
-            raise ValueError("Preset not found")
+    def get_active_session(self, db: Session, user_id: int) -> ChatSession:
+        now = datetime.now()
+        active_session = db.query(ChatSession) \
+            .filter(
+            ChatSession.external_user_id == user_id,
+            ChatSession.is_active == True,
+            ChatSession.started_at >= now - timedelta(days=1)
+        ).first()
 
-        if self.is_chat_model(preset.model):
-            try:
-                response = await self.gpt_chat_request(initial_message, preset)
-                if response.choices and response.choices[0].message:
-                    message_content = response.choices[0].message.content
-                    return message_content, response.id
-                else:
-                    return None, "Failed to get a valid response from OpenAI."
-            except Exception as e:
-                logging.error(f"OpenAI API error: {e}")
-                raise HTTPException(status_code=500, detail="OpenAI API error.")
+        if active_session:
+            return active_session
         else:
-            return None, "The specified model is not supported for chat completions."
+            new_session = ChatSession(
+                is_active=True,
+                started_at=datetime.now(),
+                external_user_id=user_id
+            )
+            db.add(new_session)
+            db.commit()
+            db.refresh(new_session)
+            return new_session
 
-    async def gpt_chat_request(self, initial_message, preset):
-        response = self.client.chat.completions.create(
+    def prepare_messages(self, initial_message: str, session: ChatSession) -> list:
+        messages = [{"role": "system", "content": "You are a helpful assistant."}]
+        history = session.get_conversation_history() if session.conversation_history else []
+        messages.extend(history)
+        messages.append({"role": "user", "content": initial_message})
+        return messages
+
+    async def ask_gpt(self, db: Session, preset_id: int, initial_message: str, user_id: int) -> Tuple[
+        Optional[str], str, int]:
+        preset = db.query(GptPreset).filter(GptPreset.id == preset_id).first()
+        session = self.get_active_session(db, user_id)
+        messages = self.prepare_messages(initial_message, session)
+
+        response = self.gpt_chat_request(messages, preset)
+        if response.choices and response.choices[0].message:
+            message_content = response.choices[0].message.content
+            current_history = session.get_conversation_history()
+            current_history.append({"role": "assistant", "content": message_content})
+            session.set_conversation_history(current_history)
+            db.commit()
+            return message_content, response.id, user_id
+        else:
+            return None, "Failed to get a valid response from OpenAI."
+
+    def gpt_chat_request(self, messages, preset):
+        return self.client.chat.completions.create(
             model=preset.model,
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": initial_message}
-            ],
+            messages=messages,
             temperature=preset.temperature,
             max_tokens=preset.max_tokens,
         )
-        print(response)
-        return response
 
-    async def find_gpt_preset_by_course_id(self, db: Session, course_id: int) -> GptPreset:
+    async def get_gpt_preset_by_course_id(self, db: Session, course_id: int) -> GptPreset:
         preset = db.query(GptPreset).filter(GptPreset.course_id == course_id).first()
         return preset

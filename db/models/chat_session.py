@@ -1,4 +1,7 @@
-from sqlalchemy import Column, Integer, Boolean, TIMESTAMP, ForeignKey
+import json
+from datetime import datetime, timedelta
+
+from sqlalchemy import Column, Integer, Boolean, String, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import relationship, backref
 
 from db.base_class import Base
@@ -12,6 +15,16 @@ class ChatSession(Base):
     started_at = Column(TIMESTAMP, nullable=False)
     ended_at = Column(TIMESTAMP)
     external_user_id = Column(Integer, ForeignKey('external_users.id'), nullable=False)
-
-    # Link back to the ExternalUser
     external_user = relationship("ExternalUser", backref=backref("chat_sessions", cascade="all, delete-orphan"))
+    conversation_history = Column(String, nullable=True)  # Add this line to store the last response ID
+
+    def set_conversation_history(self, history):
+        self.conversation_history = json.dumps(history)
+
+    def get_conversation_history(self):
+        return json.loads(self.conversation_history) if self.conversation_history else []
+
+    def is_active_based_on_time(self, lifetime_hours=24):
+        """Check if the session is still active based on its start time and a defined lifetime."""
+        now = datetime.now()
+        return now - self.started_at < timedelta(hours=lifetime_hours)
