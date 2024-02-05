@@ -94,6 +94,7 @@ class GptChatService:
         if response.choices and response.choices[0].message:
             message_content = response.choices[0].message.content
             current_history = session.get_conversation_history()
+            current_history.append({"role": "user", "content": initial_message})
             current_history.append({"role": "assistant", "content": message_content})
             session.set_conversation_history(current_history)
             db.commit()
