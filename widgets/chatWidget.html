@@ -3,26 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat with GPT</title>
+    <title>Enhanced Chat with GPT</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        #chat { border: 1px solid #ccc; padding: 10px; margin: 10px 0; height: 300px; overflow-y: auto; }
-        input, button { margin-top: 5px; }
-        #message { width: calc(100% - 90px); margin-right: 5px; }
-        button { margin-left: 5px; }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #chat { border: 1px solid #ccc; padding: 10px; margin-top: 10px; height: 300px; overflow-y: auto; background-color: #f9f9f9; }
+        #controls { margin-top: 10px; }
+        input, button { padding: 5px; }
+        #message { width: calc(100% - 110px); }
+        button { width: 100px; }
+        #wsConnect, #wsDisconnect { margin-right: 5px; }
+        #wsDisconnect { display: none; }
     </style>
 </head>
 <body>
-<label for="wsUrl">WebSocket URL:</label>
-<input type="text" id="wsUrl" placeholder="ws://localhost:8000/chat/ws/" style="margin-bottom: 5px; width: calc(100% - 2em);" value="wss://localhost:8000/chat/ws/{token}/">
-<label for="courseName">Course Name:</label>
-<input type="text" id="courseName" placeholder="Enter course name" style="margin-bottom: 5px; width: calc(100% - 2em);">
-<label for="sender">Sender:</label>
-<input type="text" id="sender" placeholder="Enter sender email" style="margin-bottom: 5px; width: calc(100% - 2em);">
-<label for="username">Username:</label>
-<input type="text" id="username" placeholder="Enter username" style="margin-bottom: 5px; width: calc(100% - 2em);">
-<button id="wsConnect" onclick="connectWebSocket()">Connect</button>
-
+<div id="controls">
+    <input type="text" id="wsUrl" placeholder="WebSocket URL" value="wss://localhost:8000/chat/ws/{token}/" style="width: calc(50% - 2em);">
+    <input type="text" id="courseName" placeholder="Course Name">
+    <input type="text" id="sender" placeholder="Sender Email">
+    <input type="text" id="username" placeholder="Username">
+    <button id="wsConnect" onclick="connectWebSocket()">Connect</button>
+    <button id="wsDisconnect" onclick="disconnectWebSocket()">Disconnect</button>
+</div>
 <div id="chat"></div>
 <input type="text" id="message" placeholder="Type a message..." disabled>
 <button onclick="sendMessage()" disabled>Send</button>
@@ -39,26 +40,41 @@
             document.getElementById("message").disabled = false;
             document.querySelector("button[onclick='sendMessage()']").disabled = false;
             document.getElementById("wsConnect").disabled = true;
+            document.getElementById("wsDisconnect").style.display = "inline-block";
         };
 
         ws.onmessage = function(event) {
             const chat = document.getElementById('chat');
             const data = JSON.parse(event.data);
-            const messageElement = document.createElement('div');
+            const messageElement = document.createElement('p');
             messageElement.textContent = "GPT: " + data.message;
             chat.appendChild(messageElement);
+            chat.scrollTop = chat.scrollHeight; // Scroll to the bottom
         };
 
         ws.onclose = function(event) {
             console.log("Disconnected from chat server.", event.reason);
-            document.getElementById("message").disabled = true;
-            document.querySelector("button[onclick='sendMessage()']").disabled = true;
-            document.getElementById("wsConnect").disabled = false;
+            resetUI();
         };
 
         ws.onerror = function(error) {
             console.log("WebSocket error: " + error);
+            resetUI();
         };
+    }
+
+    function disconnectWebSocket() {
+        if (ws) {
+            ws.close();
+            resetUI();
+        }
+    }
+
+    function resetUI() {
+        document.getElementById("message").disabled = true;
+        document.querySelector("button[onclick='sendMessage()']").disabled = true;
+        document.getElementById("wsConnect").disabled = false;
+        document.getElementById("wsDisconnect").style.display = "none";
     }
 
     function sendMessage() {

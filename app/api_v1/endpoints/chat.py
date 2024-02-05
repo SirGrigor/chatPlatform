@@ -95,15 +95,12 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
                 data_json = json.loads(text_data)
                 message = data_json['message']
 
-                # Use GptChatService to get response from GPT
-                response_message, response_id = await gpt_chat_service.ask_gpt(preset, message)
-                print(f"Received message: {response_message}")
-                # Send GPT response back to the client through WebSocket
-                await websocket.send_text(json.dumps({"message": response_message}))
-
-                # Optionally, publish the original message and GPT response to RabbitMQ for load balancing and further processing
-                await connection_manager.publish_message(course_id, message, response_message)
-
+                response_message, response_id = await gpt_chat_service.ask_gpt(db, preset.id, message)
+                print(response_message)
+                if response_message:
+                    await websocket.send_text(json.dumps({"message": response_message}))
+                else:
+                    await websocket.send_text(json.dumps({"error": "Failed to get response from GPT."}))
         except WebSocketDisconnect:
             disconnect(websocket)
     except WebSocketDisconnect:

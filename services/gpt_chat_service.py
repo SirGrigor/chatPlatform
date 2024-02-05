@@ -74,16 +74,7 @@ class GptChatService:
 
         if self.is_chat_model(preset.model):
             try:
-                response = self.client.chat.completions.create(
-                    model=preset.model,
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant."},
-                        {"role": "user", "content": initial_message}
-                    ],
-                    temperature=preset.temperature,
-                    max_tokens=preset.max_tokens,
-                )
-                # Extract and return the message content correctly
+                response = await self.gpt_chat_request(initial_message, preset)
                 if response.choices and response.choices[0].message:
                     message_content = response.choices[0].message.content
                     return message_content, response.id
@@ -95,5 +86,19 @@ class GptChatService:
         else:
             return None, "The specified model is not supported for chat completions."
 
+    async def gpt_chat_request(self, initial_message, preset):
+        response = self.client.chat.completions.create(
+            model=preset.model,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": initial_message}
+            ],
+            temperature=preset.temperature,
+            max_tokens=preset.max_tokens,
+        )
+        print(response)
+        return response
+
     async def find_gpt_preset_by_course_id(self, db: Session, course_id: int) -> GptPreset:
-        return db.query(GptPreset).filter(GptPreset.course_id == course_id).first()
+        preset = db.query(GptPreset).filter(GptPreset.course_id == course_id).first()
+        return preset
