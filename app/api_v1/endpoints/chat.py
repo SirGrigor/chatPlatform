@@ -95,8 +95,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
                 data_json = json.loads(text_data)
                 message = data_json['message']
 
-                response_message, response_id, _ = await gpt_chat_service.ask_gpt(db, preset.id, message, user.id)
-                print(response_message)
+                response_message, response_id, user_id = await gpt_chat_service.ask_gpt(db, preset.id, message, user.id)
                 if response_message:
                     await websocket.send_text(json.dumps({"message": response_message}))
                 else:
