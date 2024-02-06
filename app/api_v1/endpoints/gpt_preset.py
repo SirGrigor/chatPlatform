@@ -1,5 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from starlette.requests import Request
+from starlette.responses import HTMLResponse
+from starlette.templating import Jinja2Templates
 from uvicorn import logging
 
 from db.session import get_db
@@ -9,6 +12,7 @@ from schemas.gpt_model import GptPresetResponseSchema, GptPresetCreate, ChatResp
 
 router = APIRouter()
 gpt_chat_service = GptChatService()
+templates = Jinja2Templates(directory="app/api_v1/templates")
 
 
 @router.post("/", response_model=GptPresetResponseSchema)
@@ -35,3 +39,8 @@ async def start_chat(chat_request: ChatRequest, db: Session = Depends(get_db)):
 def get_supported_models():
     models = get_model_details()
     return GptModelDetailsResponse(models=models)
+
+
+@router.get("/chat/window/", response_class=HTMLResponse)
+async def chat_window(request: Request):
+    return templates.TemplateResponse("chat.html", {"request": request})

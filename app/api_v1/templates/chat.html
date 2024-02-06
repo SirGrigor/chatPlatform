@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Chat with GPT</title>
+    <style>
+        :root {
+            --primary-color: #4a76a8;
+            --background-color: #f0f0f0;
+            --border-color: #d1d1d1;
+            --button-color: #5cb85c;
+            --button-disabled-color: #cccccc;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        #controls {
+            background-color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #controls input[type='text'],
+        #controls button {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        #controls input[type='text'] {
+            flex-grow: 2;
+            margin-right: 10px;
+        }
+
+        button {
+            background-color: var(--button-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: darken(var(--button-color), 10%);
+        }
+
+        button:disabled {
+            background-color: var(--button-disabled-color);
+            cursor: not-allowed;
+        }
+
+        #chat {
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            margin-top: 20px;
+            height: 300px;
+            overflow-y: auto;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type='text']#message {
+            width: calc(100% - 120px);
+            margin-right: 10px;
+            display: block;
+            box-sizing: border-box;
+        }
+
+        input[type='text']#message,
+        button[onclick='sendMessage()'] {
+            padding: 10px;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        input[type='text']#message:disabled,
+        button[onclick='sendMessage()']:disabled {
+            background-color: var(--button-disabled-color);
+        }
+
+        .message-container {
+            margin-bottom: 10px;
+            padding: 5px;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            text-align: right;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 10px;
+            padding: 5px 10px;
+            display: inline-block;
+            max-width: 70%;
+        }
+
+        .gpt-message {
+            text-align: left;
+            background-color: #e1e1e1;
+            border-radius: 10px;
+            padding: 5px 10px;
+            display: inline-block;
+            max-width: 70%;
+        }
+    </style>
+</head>
+<body>
+<div id="controls">
+    <input type="text" id="wsUrl" placeholder="WebSocket URL" value="wss://localhost:8000/chat/ws/{token}/" style="width: calc(50% - 2em);">
+    <input type="text" id="courseName" placeholder="Course Name">
+    <input type="text" id="sender" placeholder="Sender Email">
+    <input type="text" id="username" placeholder="Username">
+    <button id="wsConnect" onclick="connectWebSocket()">Connect</button>
+    <button id="wsDisconnect" onclick="disconnectWebSocket()">Disconnect</button>
+</div>
+<div id="chat"></div>
+<input type="text" id="message" placeholder="Type a message..." disabled>
+<button onclick="sendMessage()" disabled>Send</button>
+
+<script>
+    let ws = null;
+
+    function connectWebSocket() {
+        const wsUrl = document.getElementById("wsUrl").value;
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function() {
+            console.log("Connected to the chat server.");
+            document.getElementById("message").disabled = false;
+            document.querySelector("button[onclick='sendMessage()']").disabled = false;
+            document.getElementById("wsConnect").disabled = true;
+            document.getElementById("wsDisconnect").style.display = "inline-block";
+        };
+
+        ws.onmessage = function(event) {
+            const chat = document.getElementById('chat');
+            const data = JSON.parse(event.data);
+            const messageElement = document.createElement('p');
+            messageElement.textContent = "GPT: " + data.message;
+            chat.appendChild(messageElement);
+            chat.scrollTop = chat.scrollHeight; // Scroll to the bottom
+        };
+
+        ws.onclose = function(event) {
+            console.log("Disconnected from chat server.", event.reason);
+            resetUI();
+        };
+
+        ws.onerror = function(error) {
+            console.log("WebSocket error: " + error);
+            resetUI();
+        };
+    }
+
+    function disconnectWebSocket() {
+        if (ws) {
+            ws.close();
+            resetUI();
+        }
+    }
+
+    function resetUI() {
+        document.getElementById("message").disabled = true;
+        document.querySelector("button[onclick='sendMessage()']").disabled = true;
+        document.getElementById("wsConnect").disabled = false;
+        document.getElementById("wsDisconnect").style.display = "none";
+    }
+
+    function sendMessage() {
+        const messageInput = document.getElementById('message');
+        const message = messageInput.value;
+        const courseName = document.getElementById('courseName').value;
+        const sender = document.getElementById('sender').value;
+        const username = document.getElementById('username').value;
+
+        if (!message) return; // Don't send empty messages
+
+        const payload = {
+            message: message,
+            course_name: courseName,
+            sender: sender,
+            username: username
+        };
+
+        ws.send(JSON.stringify(payload));
+
+        appendMessage(message, 'user-message');
+        messageInput.value = ''; // Clear input after sending
+    }
+
+    function appendMessage(message, className) {
+        const chat = document.getElementById('chat');
+        const messageElement = document.createElement('div');
+        messageElement.className = `message-container ${className}`;
+        messageElement.textContent = message;
+        chat.appendChild(messageElement);
+        chat.scrollTop = chat.scrollHeight; // Scroll to the bottom
+    }
+
+    // Modify the ws.onmessage function to use the appendMessage function
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        appendMessage("GPT: " + data.message, 'gpt-message');
+    };
+</script>
+</body>
+</html>
