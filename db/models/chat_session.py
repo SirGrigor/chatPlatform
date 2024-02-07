@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime, timedelta
 
 from sqlalchemy import Column, Integer, Boolean, String, TIMESTAMP, ForeignKey, Text
@@ -28,3 +29,8 @@ class ChatSession(Base):
         """Check if the session is still active based on its start time and a defined lifetime."""
         now = datetime.now()
         return now - self.started_at < timedelta(hours=lifetime_hours)
+
+    def clear_conversation_history(self):
+        """Clears the conversation history."""
+        logging.info(f"Clearing conversation history for session {self.id}")
+        self.conversation_history = None

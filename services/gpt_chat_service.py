@@ -1,6 +1,7 @@
 import logging
+import sys
 from datetime import datetime, timedelta
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Type
 
 from fastapi import HTTPException
 from openai import OpenAI
@@ -9,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from core.config import settings
 from db.models.chat_session import ChatSession
+from db.models.document import Document
 from db.models.gpt_preset import GptPreset
 from schemas.gpt_model import GptModelName
 
@@ -77,18 +79,36 @@ class GptChatService:
             db.refresh(new_session)
             return new_session
 
-    def prepare_messages(self, initial_message: str, session: ChatSession) -> list:
-        messages = [{"role": "system", "content": "You are a helpful assistant."}]
+    def prepare_messages(self, initial_message: str, session: ChatSession, documents) -> list:
+        file_contents = [doc.document_content for doc in documents]
+        file_context_message = "\n".join(file_contents)  # Combine all contents into a single string
+        file_context_system_message = {"role": "system", "content": file_context_message}
+
+        # Initialize messages list with file context at index 0.
+        messages = [file_context_system_message, {"role": "system", "content": "You are a helpful assistant."}]
+
+        # Add a helpful assistant message.
+
+        # Include conversation history if available.
         history = session.get_conversation_history() if session.conversation_history else []
         messages.extend(history)
+
+        # Append the initial user message.
         messages.append({"role": "user", "content": initial_message})
+
         return messages
 
     async def ask_gpt(self, db: Session, preset_id: int, initial_message: str, user_id: int) -> Tuple[
         Optional[str], str, int]:
         preset = db.query(GptPreset).filter(GptPreset.id == preset_id).first()
+        file_context = db.query(Document).filter(Document.course_id == preset.course.id).all()
         session = self.get_active_session(db, user_id)
-        messages = self.prepare_messages(initial_message, session)
+        initial_message_size_bytes = len(initial_message.encode('utf-8'))
+
+        if initial_message_size_bytes > 20480:
+            session.clear_conversation_history()
+            db.commit()
+        messages = self.prepare_messages(initial_message, session, file_context)
 
         response = self.gpt_chat_request(messages, preset)
         if response.choices and response.choices[0].message:
