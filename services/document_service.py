@@ -70,8 +70,10 @@ def upload_document(db: Session, course_id: int, file: UploadFile,
         document_content = read_document_content(file_path)
     elif file_extension == "pdf":
         document_metadata = extract_pdf_metadata(file_path)
+        document_content = read_document_content(file_path)
     elif file_extension == "docx":
         document_metadata = extract_docx_metadata(file_path)
+        document_content = read_document_content(file_path)
 
     return create_document(db=db, course_id=course_id, filename=filename, filepath=file_path,
                            file_type=file.content_type, document_content=document_content,
