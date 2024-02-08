@@ -103,8 +103,7 @@ class GptChatService:
 
         return messages
 
-    async def ask_gpt(self, db: Session, preset_id: int, initial_message: str, user_id: int) -> Tuple[
-        Optional[str], str, int]:
+    async def ask_gpt(self, db: Session, preset_id: int, initial_message: str, user_id: int):
         preset = db.query(GptPreset).filter(GptPreset.id == preset_id).first()
         file_context = db.query(Document).filter(Document.course_id == preset.course.id).all()
         session = self.get_active_session(db, user_id)
@@ -113,26 +112,46 @@ class GptChatService:
         if initial_message_size_bytes > 20480:
             session.clear_conversation_history()
             db.commit()
-        messages = self.prepare_messages(initial_message, session, file_context)
-        response = self.gpt_chat_request(messages, preset)
-        if response.choices and response.choices[0].message:
-            message_content = response.choices[0].message.content
-            current_history = session.get_conversation_history()
-            current_history.append({"role": "user", "content": initial_message})
-            current_history.append({"role": "assistant", "content": message_content})
-            session.set_conversation_history(current_history)
-            db.commit()
-            return message_content, response.id, user_id
-        else:
-            return None, "Failed to get a valid response from OpenAI."
 
-    def gpt_chat_request(self, messages, preset):
-        return self.client.chat.completions.create(
+        messages = self.prepare_messages(initial_message, session, file_context)
+
+        # Initially log the user's message in the conversation history
+        current_history = session.get_conversation_history()
+        current_history.append({"role": "user", "content": initial_message})
+        session.set_conversation_history(current_history)
+        db.commit()
+
+        async for response in self.gpt_chat_request(messages, preset):
+            print(response)  # Debug print to inspect the response structure
+            if response.choices and response.choices[0].delta and response.choices[0].delta.content:
+                chunk_content = response.choices[0].delta.content
+                # Process each chunk: Append it to the conversation history and yield
+                current_history = session.get_conversation_history()
+                current_history.append({"role": "assistant", "content": chunk_content})
+                session.set_conversation_history(current_history)
+                db.commit()
+
+                # Yield the chunk to the caller, which could be a WebSocket handler
+                yield chunk_content
+            else:
+                # Handle the case where GPT fails to return a valid response
+                yield None, ".", user_id
+
+
+
+    async def gpt_chat_request(self, messages, preset):
+        # Send the ChatCompletion request with streaming enabled
+        response = self.client.chat.completions.create(
             model=preset.model,
             messages=messages,
             temperature=preset.temperature,
             max_tokens=preset.max_tokens,
+            stream=True
         )
+
+        # Iterate through the stream of responses
+        for chunk in response:
+            yield chunk
 
     async def get_gpt_preset_by_course_id(self, db: Session, course_id: int) -> GptPreset:
         preset = db.query(GptPreset).filter(GptPreset.course_id == course_id).first()

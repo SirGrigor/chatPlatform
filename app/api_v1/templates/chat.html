@@ -13,14 +13,12 @@
             --button-disabled-color: #cccccc;
             --text-color: #333;
         }
-
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
             background-color: var(--background-color);
             color: var(--text-color);
         }
-
         #controls {
             background-color: white;
             padding: 20px;
@@ -29,21 +27,17 @@
             flex-wrap: wrap;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-
-        #controls input[type='text'],
-        #controls button {
+        #controls input[type='text'], #controls button {
             padding: 10px;
             margin: 5px;
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 16px;
         }
-
         #controls input[type='text'] {
             flex-grow: 2;
             margin-right: 10px;
         }
-
         button {
             background-color: var(--button-color);
             color: white;
@@ -51,16 +45,13 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
-
         button:hover:not(:disabled) {
             background-color: darken(var(--button-color), 10%);
         }
-
         button:disabled {
             background-color: var(--button-disabled-color);
             cursor: not-allowed;
         }
-
         #chat {
             border: 1px solid var(--border-color);
             padding: 15px;
@@ -72,77 +63,62 @@
             display: flex;
             flex-direction: column;
         }
-
         #chat {
             flex-grow: 1;
             overflow-y: auto;
         }
-
         .message-container {
-            /* ...existing styles... */
-            border-radius: 15px; /* Rounded corners for message bubbles */
+            border-radius: 15px;
             margin-bottom: 10px;
-            padding: 10px 15px; /* Increased padding for better readability */
-            max-width: 80%; /* Adjust the width as per design */
-            display: block; /* Make each span behave like a paragraph */
+            padding: 10px 15px;
+            max-width: 80%;
+            display: block;
         }
-
         button[onclick='sendMessage()'] {
-            margin-left: 10px; /* Add margin between input field and button */
+            margin-left: 10px;
         }
-
-        #message,
-        button[onclick='sendMessage()'] {
-            /* ...existing styles... */
-            padding: 10px 15px; /* Increased padding for better interaction */
-            font-size: 18px; /* Larger font for better visibility */
+        #message, button[onclick='sendMessage()'] {
+            padding: 10px 15px;
+            font-size: 18px;
         }
-
         input[type='text']#message {
             width: calc(100% - 120px);
             margin-right: 10px;
             display: block;
             box-sizing: border-box;
         }
-
-        input[type='text']#message,
-        button[onclick='sendMessage()'] {
+        input[type='text']#message, button[onclick='sendMessage()'] {
             padding: 10px;
             font-size: 16px;
             margin-top: 20px;
         }
-
-        input[type='text']#message:disabled,
-        button[onclick='sendMessage()']:disabled {
+        input[type='text']#message:disabled, button[onclick='sendMessage()']:disabled {
             background-color: var(--button-disabled-color);
         }
-
         .user-message {
             text-align: right;
             background-color: var(--primary-color);
             color: white;
             border-radius: 10px;
             padding: 5px 10px;
-            display: block; /* Updated from inline-block to block */
+            display: block;
             max-width: 70%;
-            margin-left: auto; /* Keeps the user message aligned to the right */
+            margin-left: auto;
         }
-
         .gpt-message {
             text-align: left;
             background-color: #e1e1e1;
             border-radius: 10px;
             padding: 5px 10px;
-            display: block; /* Updated from inline-block to block */
+            display: block;
             max-width: 70%;
-            align-self: flex-start; /* Align GPT messages to the left */
+            align-self: flex-start;
         }
     </style>
 </head>
 <body>
 <div id="controls">
-    <input type="text" id="wsUrl" placeholder="WebSocket URL" value="wss://localhost:8000/chat/ws/{token}/"
-           style="width: calc(50% - 2em);">
+    <input type="text" id="wsUrl" placeholder="WebSocket URL" value="wss://localhost:8000/chat/ws/{token}/" style="width: calc(50% - 2em);">
     <input type="text" id="courseName" placeholder="Course Name">
     <input type="text" id="sender" placeholder="Sender Email">
     <input type="text" id="username" placeholder="Username">
@@ -160,7 +136,7 @@
         const wsUrl = document.getElementById("wsUrl").value;
         ws = new WebSocket(wsUrl);
 
-        ws.onopen = function () {
+        ws.onopen = function() {
             console.log("Connected to the chat server.");
             document.getElementById("message").disabled = false;
             document.querySelector("button[onclick='sendMessage()']").disabled = false;
@@ -168,59 +144,36 @@
             document.getElementById("wsDisconnect").style.display = "inline-block";
         };
 
-        ws.onmessage = function (event) {
-            const chat = document.getElementById('chat');
+        ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            const messageElement = document.createElement('p');
-            messageElement.textContent = "GPT: " + data.message;
-            chat.appendChild(messageElement);
-            chat.scrollTop = chat.scrollHeight; // Scroll to the bottom
+            if(data.message) {
+                appendMessage(data.message, 'gpt-message');
+            }
         };
 
-        ws.onclose = function (event) {
+        ws.onclose = function(event) {
             console.log("Disconnected from chat server.", event.reason);
             resetUI();
         };
 
-        ws.onerror = function (error) {
+        ws.onerror = function(error) {
             console.log("WebSocket error: " + error);
             resetUI();
         };
     }
 
-    function disconnectWebSocket() {
-        if (ws) {
-            ws.close();
-            resetUI();
-        }
-    }
-
-    function resetUI() {
-        document.getElementById("message").disabled = true;
-        document.querySelector("button[onclick='sendMessage()']").disabled = true;
-        document.getElementById("wsConnect").disabled = false;
-        document.getElementById("wsDisconnect").style.display = "none";
-    }
-
     function sendMessage() {
         const messageInput = document.getElementById('message');
-        const message = messageInput.value;
-        const courseName = document.getElementById('courseName').value;
-        const sender = document.getElementById('sender').value;
-        const username = document.getElementById('username').value;
+        const message = messageInput.value.trim();
+        const courseName = document.getElementById('courseName').value.trim();
+        const sender = document.getElementById('sender').value.trim();
+        const username = document.getElementById('username').value.trim();
 
-        if (!message) return; // Don't send empty messages
+        if (!message) return;
 
-        const payload = {
-            message: message,
-            course_name: courseName,
-            sender: sender,
-            username: username
-        };
-
+        const payload = { message, course_name: courseName, sender, username };
         ws.send(JSON.stringify(payload));
-
-        appendMessage(message, 'user-message'); // For user messages
+        appendMessage(message, 'user-message');
         messageInput.value = ''; // Clear input after sending
     }
 
@@ -229,31 +182,13 @@
         const messageContainer = document.createElement('div');
         messageContainer.className = `message-container ${className}`;
 
-        try {
-            const parsedMessage = JSON.parse(message);
-            const formattedMessage = JSON.stringify(parsedMessage, null, 2);
-            const pre = document.createElement('pre');
-            pre.textContent = formattedMessage;
-            messageContainer.appendChild(pre);
-        } catch (e) {
-            // Enhanced Markdown-like formatting
-            let formattedMessage = message
-                .replace(/```(.*?)```/gms, '<pre>$1</pre>') // Code block
-                .replace(/`([^`]+)`/g, '<code>$1</code>') // Inline code
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-                .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
-                .replace(/^# (.*?)$/gm, '<h1>$1</h1>') // H1
-                .replace(/^## (.*?)$/gm, '<h2>$2</h2>') // H2
-                .replace(/^### (.*?)$/gm, '<h3>$3</h3>') // H3
-                .replace(/^\* (.*?)$/gm, '<ul><li>$1</li></ul>') // Unordered list items
-                .replace(/^\- (.*?)$/gm, '<ul><li>$1</li></ul>'); // Alternative list item
-
-            formattedMessage = formattedMessage.replace(/\n/g, '<br>');
-            messageContainer.innerHTML = formattedMessage;
+        if(className === 'gpt-message' && message.startsWith('GPT: ')) {
+            message = message.slice(5); // Remove the "GPT: " prefix if present
         }
+        messageContainer.textContent = message;
 
         chat.appendChild(messageContainer);
-        chat.scrollTop = chat.scrollHeight;
+        chat.scrollTop = chat.scrollHeight; // Scroll to the bottom
     }
 
     function resetUI() {
@@ -261,13 +196,13 @@
         document.querySelector("button[onclick='sendMessage()']").disabled = true;
         document.getElementById("wsConnect").disabled = false;
         document.getElementById("wsDisconnect").style.display = "none";
-        document.getElementById('chat').innerHTML = '';
+        document.getElementById('chat').innerHTML = ''; // Clear the chat
     }
 
-    ws.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-        appendMessage("GPT: " + data.message, 'gpt-message');
-    };
+    // Initialize WebSocket connection on page load.
+    document.addEventListener('DOMContentLoaded', () => {
+        // Optionally auto-connect or wait for user to press connect
+    });
 </script>
 </body>
 </html>

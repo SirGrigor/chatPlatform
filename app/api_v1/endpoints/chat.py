@@ -56,7 +56,6 @@ def disconnect(websocket: WebSocket):
 async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Depends(get_db)):
     logging.info(f"WebSocket connection attempt with token: {token}")
     try:
-        # Verify the token and get admin_id and user_type
         admin_id, user_type = await verify_external_token(token, db)
         if user_type != "external_admin":
             logging.warning("WebSocket connection attempt with invalid user type")
@@ -64,43 +63,38 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
             return
 
         await connect(websocket, admin_id)
-        # Receive initial setup message from the client
         setup_data = await websocket.receive_text()
         setup_data_json = json.loads(setup_data)
 
-        # Extract username and course_name from the received setup_data_json
         username = setup_data_json.get('username')
         course_name = setup_data_json.get('course_name')
 
-        # Validate received data
         if not username or not course_name:
             logging.error("Missing username or course_name in initial WebSocket message")
-            await websocket.close(code=4000)  # Use an appropriate close code
+            await websocket.close(code=4000)
             return
 
-        # Use the extracted data
         course_id = await get_course_id_by_name(db, course_name)
-        preset = await gpt_chat_service.get_gpt_preset_by_course_id(db, course_id)
-        user = await get_or_create_external_user(db, username, course_id)
-        # Assuming course_id is needed and can be derived from course_name in your application
-
         if not course_id:
             logging.error("Invalid course_name provided")
-            await websocket.close(code=4000)  # Use an appropriate close code
+            await websocket.close(code=4000)
             return
 
-        try:
-            while True:
-                text_data = await websocket.receive_text()
-                data_json = json.loads(text_data)
-                message = data_json['message']
+        preset = await gpt_chat_service.get_gpt_preset_by_course_id(db, course_id)
+        user = await get_or_create_external_user(db, username, course_id)
 
-                response_message, response_id, user_id = await gpt_chat_service.ask_gpt(db, preset.id, message, user.id)
-                if response_message:
-                    await websocket.send_text(json.dumps({"message": response_message}))
+        while True:
+            text_data = await websocket.receive_text()
+            data_json = json.loads(text_data)
+            message = data_json['message']
+
+            # Stream GPT responses directly to the WebSocket client
+            async for response_chunk in gpt_chat_service.ask_gpt(db, preset.id, message, user.id):
+                if response_chunk:
+                    await websocket.send_text(json.dumps({"message": response_chunk}))
                 else:
+                    # If `response_chunk` is None, it indicates an error occurred
                     await websocket.send_text(json.dumps({"error": "Failed to get response from GPT."}))
-        except WebSocketDisconnect:
-            disconnect(websocket)
+                    break  # Exit the loop if an error occurred
     except WebSocketDisconnect:
-        disconnect(websocket)
+        await disconnect(websocket)
