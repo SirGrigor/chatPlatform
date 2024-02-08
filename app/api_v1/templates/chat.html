@@ -131,6 +131,7 @@
 
 <script>
     let ws = null;
+    let lastGptMessageContainer = null; // Reference to the last GPT message container
 
     function connectWebSocket() {
         const wsUrl = document.getElementById("wsUrl").value;
@@ -173,22 +174,35 @@
 
         const payload = { message, course_name: courseName, sender, username };
         ws.send(JSON.stringify(payload));
-        appendMessage(message, 'user-message');
+        appendMessage(`You: ${message}`, 'user-message'); // Display "You: " prefix for user messages
         messageInput.value = ''; // Clear input after sending
+        lastGptMessageContainer = null; // Reset reference for GPT messages
     }
 
     function appendMessage(message, className) {
         const chat = document.getElementById('chat');
-        const messageContainer = document.createElement('div');
-        messageContainer.className = `message-container ${className}`;
 
-        if(className === 'gpt-message' && message.startsWith('GPT: ')) {
-            message = message.slice(5); // Remove the "GPT: " prefix if present
+        if (className === 'gpt-message') {
+            if (!lastGptMessageContainer) {
+                lastGptMessageContainer = createMessageContainer(className);
+                chat.appendChild(lastGptMessageContainer);
+            }
+            // Append new GPT message content to the existing container
+            lastGptMessageContainer.textContent += (lastGptMessageContainer.textContent ? " " : "") + message;
+        } else {
+            const messageContainer = createMessageContainer(className);
+            messageContainer.textContent = message;
+            chat.appendChild(messageContainer);
+            lastGptMessageContainer = null; // User message sent, reset GPT message container for next response
         }
-        messageContainer.textContent = message;
 
-        chat.appendChild(messageContainer);
         chat.scrollTop = chat.scrollHeight; // Scroll to the bottom
+    }
+
+    function createMessageContainer(className) {
+        const container = document.createElement('div');
+        container.className = `message-container ${className}`;
+        return container;
     }
 
     function resetUI() {
@@ -197,12 +211,8 @@
         document.getElementById("wsConnect").disabled = false;
         document.getElementById("wsDisconnect").style.display = "none";
         document.getElementById('chat').innerHTML = ''; // Clear the chat
+        lastGptMessageContainer = null; // Reset reference for GPT messages
     }
-
-    // Initialize WebSocket connection on page load.
-    document.addEventListener('DOMContentLoaded', () => {
-        // Optionally auto-connect or wait for user to press connect
-    });
 </script>
 </body>
 </html>
