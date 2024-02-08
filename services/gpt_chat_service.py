@@ -85,7 +85,12 @@ class GptChatService:
         file_context_system_message = {"role": "system", "content": file_context_message}
 
         # Initialize messages list with file context at index 0.
-        messages = [file_context_system_message, {"role": "system", "content": "You are a helpful assistant."}]
+        messages = [file_context_system_message, {"role": "system",
+                                                  "content": "You are a helpful assistant. Note: If your question "
+                                                             "cannot be answered through the file content, "
+                                                             "I'll try to help based on my own knowledge. I aim to be "
+                                                             "helpful yet discreet, focusing primarily on the "
+                                                             "information you've provided."}]
 
         # Add a helpful assistant message.
 
@@ -109,7 +114,6 @@ class GptChatService:
             session.clear_conversation_history()
             db.commit()
         messages = self.prepare_messages(initial_message, session, file_context)
-
         response = self.gpt_chat_request(messages, preset)
         if response.choices and response.choices[0].message:
             message_content = response.choices[0].message.content

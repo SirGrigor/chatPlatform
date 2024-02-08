@@ -84,6 +84,7 @@
             margin-bottom: 10px;
             padding: 10px 15px; /* Increased padding for better readability */
             max-width: 80%; /* Adjust the width as per design */
+            display: block; /* Make each span behave like a paragraph */
         }
 
         button[onclick='sendMessage()'] {
@@ -126,6 +127,7 @@
             max-width: 70%;
             margin-left: auto; /* Keeps the user message aligned to the right */
         }
+
         .gpt-message {
             text-align: left;
             background-color: #e1e1e1;
@@ -139,7 +141,8 @@
 </head>
 <body>
 <div id="controls">
-    <input type="text" id="wsUrl" placeholder="WebSocket URL" value="wss://localhost:8000/chat/ws/{token}/" style="width: calc(50% - 2em);">
+    <input type="text" id="wsUrl" placeholder="WebSocket URL" value="wss://localhost:8000/chat/ws/{token}/"
+           style="width: calc(50% - 2em);">
     <input type="text" id="courseName" placeholder="Course Name">
     <input type="text" id="sender" placeholder="Sender Email">
     <input type="text" id="username" placeholder="Username">
@@ -157,7 +160,7 @@
         const wsUrl = document.getElementById("wsUrl").value;
         ws = new WebSocket(wsUrl);
 
-        ws.onopen = function() {
+        ws.onopen = function () {
             console.log("Connected to the chat server.");
             document.getElementById("message").disabled = false;
             document.querySelector("button[onclick='sendMessage()']").disabled = false;
@@ -165,7 +168,7 @@
             document.getElementById("wsDisconnect").style.display = "inline-block";
         };
 
-        ws.onmessage = function(event) {
+        ws.onmessage = function (event) {
             const chat = document.getElementById('chat');
             const data = JSON.parse(event.data);
             const messageElement = document.createElement('p');
@@ -174,12 +177,12 @@
             chat.scrollTop = chat.scrollHeight; // Scroll to the bottom
         };
 
-        ws.onclose = function(event) {
+        ws.onclose = function (event) {
             console.log("Disconnected from chat server.", event.reason);
             resetUI();
         };
 
-        ws.onerror = function(error) {
+        ws.onerror = function (error) {
             console.log("WebSocket error: " + error);
             resetUI();
         };
@@ -223,17 +226,47 @@
 
     function appendMessage(message, className) {
         const chat = document.getElementById('chat');
-        const messageElement = document.createElement('div');
-        messageElement.className = `message-container ${className}`;
-        messageElement.textContent = message;
-        chat.appendChild(messageElement);
-        chat.scrollTop = chat.scrollHeight; // Scroll to the bottom
+        const messageContainer = document.createElement('div');
+        messageContainer.className = `message-container ${className}`;
+
+        try {
+            const parsedMessage = JSON.parse(message);
+            const formattedMessage = JSON.stringify(parsedMessage, null, 2);
+            const pre = document.createElement('pre');
+            pre.textContent = formattedMessage;
+            messageContainer.appendChild(pre);
+        } catch (e) {
+            // Enhanced Markdown-like formatting
+            let formattedMessage = message
+                .replace(/```(.*?)```/gms, '<pre>$1</pre>') // Code block
+                .replace(/`([^`]+)`/g, '<code>$1</code>') // Inline code
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
+                .replace(/^# (.*?)$/gm, '<h1>$1</h1>') // H1
+                .replace(/^## (.*?)$/gm, '<h2>$2</h2>') // H2
+                .replace(/^### (.*?)$/gm, '<h3>$3</h3>') // H3
+                .replace(/^\* (.*?)$/gm, '<ul><li>$1</li></ul>') // Unordered list items
+                .replace(/^\- (.*?)$/gm, '<ul><li>$1</li></ul>'); // Alternative list item
+
+            formattedMessage = formattedMessage.replace(/\n/g, '<br>');
+            messageContainer.innerHTML = formattedMessage;
+        }
+
+        chat.appendChild(messageContainer);
+        chat.scrollTop = chat.scrollHeight;
     }
 
-    // Modify the ws.onmessage function to use the appendMessage function
-    ws.onmessage = function(event) {
+    function resetUI() {
+        document.getElementById("message").disabled = true;
+        document.querySelector("button[onclick='sendMessage()']").disabled = true;
+        document.getElementById("wsConnect").disabled = false;
+        document.getElementById("wsDisconnect").style.display = "none";
+        document.getElementById('chat').innerHTML = '';
+    }
+
+    ws.onmessage = function (event) {
         const data = JSON.parse(event.data);
-        appendMessage("GPT: " + data.message, 'gpt-message'); // For GPT messages
+        appendMessage("GPT: " + data.message, 'gpt-message');
     };
 </script>
 </body>
