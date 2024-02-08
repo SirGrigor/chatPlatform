@@ -49,7 +49,9 @@ async def connect(websocket: WebSocket, user: ExternalUser):
 
 
 def disconnect(websocket: WebSocket):
-    active_connections.remove(websocket)
+    if websocket in active_connections:
+        active_connections.remove(websocket)
+    logging.info("WebSocket disconnected")
 
 
 @router.websocket("/ws/{token}")
@@ -97,4 +99,5 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
                     await websocket.send_text(json.dumps({"error": "Failed to get response from GPT."}))
                     break  # Exit the loop if an error occurred
     except WebSocketDisconnect:
-        await disconnect(websocket)
+        disconnect(websocket)
+        logging.info("WebSocket connection closed")

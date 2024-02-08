@@ -13,12 +13,14 @@
             --button-disabled-color: #cccccc;
             --text-color: #333;
         }
+
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
             background-color: var(--background-color);
             color: var(--text-color);
         }
+
         #controls {
             background-color: white;
             padding: 20px;
@@ -27,6 +29,7 @@
             flex-wrap: wrap;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+
         #controls input[type='text'], #controls button {
             padding: 10px;
             margin: 5px;
@@ -34,10 +37,12 @@
             border-radius: 4px;
             font-size: 16px;
         }
+
         #controls input[type='text'] {
             flex-grow: 2;
             margin-right: 10px;
         }
+
         button {
             background-color: var(--button-color);
             color: white;
@@ -45,13 +50,16 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
+
         button:hover:not(:disabled) {
             background-color: darken(var(--button-color), 10%);
         }
+
         button:disabled {
             background-color: var(--button-disabled-color);
             cursor: not-allowed;
         }
+
         #chat {
             border: 1px solid var(--border-color);
             padding: 15px;
@@ -63,10 +71,12 @@
             display: flex;
             flex-direction: column;
         }
+
         #chat {
             flex-grow: 1;
             overflow-y: auto;
         }
+
         .message-container {
             border-radius: 15px;
             margin-bottom: 10px;
@@ -74,27 +84,33 @@
             max-width: 80%;
             display: block;
         }
+
         button[onclick='sendMessage()'] {
             margin-left: 10px;
         }
+
         #message, button[onclick='sendMessage()'] {
             padding: 10px 15px;
             font-size: 18px;
         }
+
         input[type='text']#message {
             width: calc(100% - 120px);
             margin-right: 10px;
             display: block;
             box-sizing: border-box;
         }
+
         input[type='text']#message, button[onclick='sendMessage()'] {
             padding: 10px;
             font-size: 16px;
             margin-top: 20px;
         }
+
         input[type='text']#message:disabled, button[onclick='sendMessage()']:disabled {
             background-color: var(--button-disabled-color);
         }
+
         .user-message {
             text-align: right;
             background-color: var(--primary-color);
@@ -105,6 +121,7 @@
             max-width: 70%;
             margin-left: auto;
         }
+
         .gpt-message {
             text-align: left;
             background-color: #e1e1e1;
@@ -114,11 +131,23 @@
             max-width: 70%;
             align-self: flex-start;
         }
+
+        .heading {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 <div id="controls">
-    <input type="text" id="wsUrl" placeholder="WebSocket URL" value="wss://localhost:8000/chat/ws/{token}/" style="width: calc(50% - 2em);">
+    <input type="text" id="wsUrl" placeholder="WebSocket URL" value="wss://localhost:8000/chat/ws/{token}/"
+           style="width: calc(50% - 2em);">
     <input type="text" id="courseName" placeholder="Course Name">
     <input type="text" id="sender" placeholder="Sender Email">
     <input type="text" id="username" placeholder="Username">
@@ -132,12 +161,19 @@
 <script>
     let ws = null;
     let lastGptMessageContainer = null; // Reference to the last GPT message container
+    function removeMarkersAndIds(text) {
+        // This pattern matches:
+        // 1. `,.,22` or similar markers at the start or end of the string
+        // 2. A comma followed by any number of digits followed by a comma, at the start or end of the string
+        const pattern = /^(,\.?,\d+\s+|\s+,\.?,\d+)$|^(,\d+,\s+|\s+,\d+,$)/g;
+        return text.replace(pattern, ''); // Remove the matched patterns
+    }
 
     function connectWebSocket() {
         const wsUrl = document.getElementById("wsUrl").value;
         ws = new WebSocket(wsUrl);
 
-        ws.onopen = function() {
+        ws.onopen = function () {
             console.log("Connected to the chat server.");
             document.getElementById("message").disabled = false;
             document.querySelector("button[onclick='sendMessage()']").disabled = false;
@@ -145,19 +181,19 @@
             document.getElementById("wsDisconnect").style.display = "inline-block";
         };
 
-        ws.onmessage = function(event) {
+        ws.onmessage = function (event) {
             const data = JSON.parse(event.data);
-            if(data.message) {
+            if (data.message) {
                 appendMessage(data.message, 'gpt-message');
             }
         };
 
-        ws.onclose = function(event) {
+        ws.onclose = function (event) {
             console.log("Disconnected from chat server.", event.reason);
             resetUI();
         };
 
-        ws.onerror = function(error) {
+        ws.onerror = function (error) {
             console.log("WebSocket error: " + error);
             resetUI();
         };
@@ -172,7 +208,7 @@
 
         if (!message) return;
 
-        const payload = { message, course_name: courseName, sender, username };
+        const payload = {message, course_name: courseName, sender, username};
         ws.send(JSON.stringify(payload));
         appendMessage(`You: ${message}`, 'user-message'); // Display "You: " prefix for user messages
         messageInput.value = ''; // Clear input after sending
@@ -181,19 +217,27 @@
 
     function appendMessage(message, className) {
         const chat = document.getElementById('chat');
+        message = removeMarkersAndIds(message); // Assuming removeMarkers is already defined
 
+        // Simple Markdown-like parsing for "### " (headings) and "**" (bold)
+        message = message
+            .replace(/### (.*?)\n/g, '<div class="heading">$1</div>') // Convert "### " to headings
+            .replace(/\*\*(.*?)\*\*/g, '<span class="bold">$1</span>'); // Convert "**" to bold text
+
+        // Check if the message belongs to GPT or the user
         if (className === 'gpt-message') {
             if (!lastGptMessageContainer) {
                 lastGptMessageContainer = createMessageContainer(className);
                 chat.appendChild(lastGptMessageContainer);
             }
-            // Append new GPT message content to the existing container
-            lastGptMessageContainer.textContent += (lastGptMessageContainer.textContent ? " " : "") + message;
+            // Append the parsed message HTML directly
+            lastGptMessageContainer.innerHTML += message;
         } else {
+            // For user messages, create a new container
             const messageContainer = createMessageContainer(className);
-            messageContainer.textContent = message;
+            messageContainer.innerHTML = message; // Use innerHTML to render the parsed Markdown
             chat.appendChild(messageContainer);
-            lastGptMessageContainer = null; // User message sent, reset GPT message container for next response
+            lastGptMessageContainer = null; // Reset for next GPT message
         }
 
         chat.scrollTop = chat.scrollHeight; // Scroll to the bottom
@@ -213,6 +257,27 @@
         document.getElementById('chat').innerHTML = ''; // Clear the chat
         lastGptMessageContainer = null; // Reset reference for GPT messages
     }
+
+    function disconnectWebSocket() {
+        if (ws) {
+            ws.close();
+            console.log("WebSocket disconnected.");
+            resetUI(); // Handle any UI cleanup
+        }
+    }
+
+    window.addEventListener('beforeunload', () => {
+        if (ws) {
+            ws.close(1000, "Page unloaded"); // 1000 is a normal closure
+        }
+    });
+    document.getElementById('wsDisconnect').addEventListener('click', () => {
+        if (ws) {
+            ws.close(1000, "User initiated disconnect"); // Provide a reason for closure
+            resetUI(); // Call resetUI to adjust the UI accordingly
+        }
+    });
+
 </script>
 </body>
 </html>
