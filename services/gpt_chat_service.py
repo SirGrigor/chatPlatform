@@ -1,11 +1,7 @@
 import logging
-import sys
 from datetime import datetime, timedelta
-from typing import Optional, Tuple, List, Type
 
-from fastapi import HTTPException
 from openai import OpenAI
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core.config import settings
