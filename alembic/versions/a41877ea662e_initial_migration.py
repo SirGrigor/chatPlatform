@@ -1,8 +1,8 @@
-"""Initial migrati
+"""Initial migration
 
-Revision ID: 0c14d3f02c55
+Revision ID: a41877ea662e
 Revises: 
-Create Date: 2024-02-02 19:48:01.537663
+Create Date: 2024-02-10 19:04:21.862028
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0c14d3f02c55'
+revision: str = 'a41877ea662e'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -27,6 +27,7 @@ def upgrade() -> None:
     sa.Column('password_hash', sa.String(length=255), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(), nullable=True),
+    sa.Column('user_type', sa.String(length=255), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
     sa.UniqueConstraint('username')
@@ -37,6 +38,7 @@ def upgrade() -> None:
     sa.Column('username', sa.String(length=255), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(), nullable=True),
+    sa.Column('user_type', sa.String(length=255), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_external_users_id'), 'external_users', ['id'], unique=False)
@@ -57,6 +59,7 @@ def upgrade() -> None:
     sa.Column('started_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('ended_at', sa.TIMESTAMP(), nullable=True),
     sa.Column('external_user_id', sa.Integer(), nullable=False),
+    sa.Column('conversation_history', sa.Text(), nullable=True),
     sa.ForeignKeyConstraint(['external_user_id'], ['external_users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -65,13 +68,11 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('title', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=False),
-    sa.Column('widget_token', sa.String(length=255), nullable=False),
     sa.Column('created_by', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
-    sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('created_at', sa.TIMESTAMP(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.TIMESTAMP(), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['created_by'], ['admin_users.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('widget_token')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_courses_id'), 'courses', ['id'], unique=False)
     op.create_table('documents',
@@ -79,38 +80,44 @@ def upgrade() -> None:
     sa.Column('course_id', sa.Integer(), nullable=False),
     sa.Column('filename', sa.String(length=255), nullable=False),
     sa.Column('filepath', sa.Text(), nullable=False),
-    sa.Column('file_type', sa.String(length=50), nullable=False),
+    sa.Column('file_type', sa.String(length=255), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('document_content', sa.Text(), nullable=True),
+    sa.Column('document_metadata', sa.Text(), nullable=True),
     sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_documents_id'), 'documents', ['id'], unique=False)
-    op.create_table('messages',
+    op.create_table('gpt_presets',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('session_id', sa.Integer(), nullable=False),
-    sa.Column('text', sa.Text(), nullable=False),
-    sa.Column('is_user_message', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
-    sa.ForeignKeyConstraint(['session_id'], ['chat_sessions.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_messages_id'), 'messages', ['id'], unique=False)
-    op.create_table('user_course_association',
-    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(), nullable=False),
+    sa.Column('model', sa.String(), nullable=False),
+    sa.Column('max_tokens', sa.Integer(), nullable=True),
+    sa.Column('temperature', sa.Float(), nullable=True),
     sa.Column('course_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['external_users.id'], ),
-    sa.PrimaryKeyConstraint('user_id', 'course_id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name')
     )
+    op.create_index(op.f('ix_gpt_presets_id'), 'gpt_presets', ['id'], unique=False)
+    op.create_table('user_course_association',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('course_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_user_course_association_id'), 'user_course_association', ['id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index(op.f('ix_user_course_association_id'), table_name='user_course_association')
     op.drop_table('user_course_association')
-    op.drop_index(op.f('ix_messages_id'), table_name='messages')
-    op.drop_table('messages')
+    op.drop_index(op.f('ix_gpt_presets_id'), table_name='gpt_presets')
+    op.drop_table('gpt_presets')
     op.drop_index(op.f('ix_documents_id'), table_name='documents')
     op.drop_table('documents')
     op.drop_index(op.f('ix_courses_id'), table_name='courses')

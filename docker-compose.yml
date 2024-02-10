@@ -14,10 +14,9 @@ services:
       - DOCUMENT_STORAGE_PATH=/app/documents
     volumes:
       - .:/app
-      - document_storage:/app/documents
+      - shared_document_storage:/app/documents  # Updated to use shared volume
     entrypoint: /app/entrypoint.sh
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --ssl-keyfile certificates/key.pem --ssl-certfile certificates/cert.pem --log-level debug
-
     networks:
       - app_network
 
@@ -57,9 +56,10 @@ services:
 
 volumes:
   postgres_data:
-  document_storage:
+  shared_document_storage:
 
 networks:
   app_network:
+    name: chatplatform_app_network
     driver: bridge
 
