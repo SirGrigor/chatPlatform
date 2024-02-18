@@ -13,7 +13,6 @@ app = FastAPI(
     ssl_certfile=settings.SSL_CERT_FILE,
 )
 
-# CORS Middleware setup to allow any origin
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows any machine to send requests
@@ -22,14 +21,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include your API router
 app.include_router(api_router)
 
-# Connection manager instance for RabbitMQ
 manager = ConnectionManager(rabbitmq_url=settings.RABBITMQ_URL)
 
 
-# Startup event handler to connect to RabbitMQ
 @app.on_event("startup")
 async def startup_event():
     await manager.connect_to_rabbitmq()

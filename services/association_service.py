@@ -1,11 +1,9 @@
-from sqlalchemy.orm import Session
-
 from db.models.user_course_association import UserCourseAssociation
 
 
 class AssociationService:
-    def __init__(self, db_session: Session):
-        self.db = db_session
+    def __init__(self, db):
+        self.db = db
 
     def add_association(self, user_id: int, course_id: int) -> bool:
         """

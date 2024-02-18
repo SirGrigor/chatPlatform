@@ -148,7 +148,6 @@
 <div id="controls">
     <input type="text" id="wsUrl" placeholder="WebSocket URL" value="wss://localhost:8000/chat/ws/{token}/"
            style="width: calc(50% - 2em);">
-    <input type="text" id="courseName" placeholder="Course Name">
     <input type="text" id="sender" placeholder="Sender Email">
     <input type="text" id="username" placeholder="Username">
     <button id="wsConnect" onclick="connectWebSocket()">Connect</button>
@@ -202,13 +201,12 @@
     function sendMessage() {
         const messageInput = document.getElementById('message');
         const message = messageInput.value.trim();
-        const courseName = document.getElementById('courseName').value.trim();
         const sender = document.getElementById('sender').value.trim();
         const username = document.getElementById('username').value.trim();
 
         if (!message) return;
 
-        const payload = {message, course_name: courseName, sender, username};
+        const payload = {message, sender, username};
         ws.send(JSON.stringify(payload));
         appendMessage(`You: ${message}`, 'user-message'); // Display "You: " prefix for user messages
         messageInput.value = ''; // Clear input after sending

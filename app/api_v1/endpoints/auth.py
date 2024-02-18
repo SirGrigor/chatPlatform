@@ -1,17 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 
-from db.session import get_db
+from db.session import DBSession
 from schemas.auth import Token, Login
-from services.jwt_manager import create_access_token, create_external_refresh_token
-from services.user_service import authenticate_user
+from services.jwt_manager import create_access_token, JWTManager
+from services.user_service import UserService, authenticate_user_by_jwt
 
 router = APIRouter()
 
 
 @router.post("/token", response_model=Token)
-def login_for_access_token(form_data: Login, db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.email, form_data.password)
+def login_for_access_token(form_data: Login, db: Session = Depends(DBSession.get_db)):
+    user_service = UserService(db=db)
+    user = user_service.authenticate_user(form_data.email, form_data.password)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
 
@@ -23,11 +24,12 @@ def login_for_access_token(form_data: Login, db: Session = Depends(get_db)):
 
 
 @router.post("/external/token", response_model=Token)
-def get_external_access_token(email: str, password: str, db: Session = Depends(get_db)):
-    user = authenticate_user(db, email, password)
+def get_external_access_token(jwt: str, db: Session = Depends(DBSession.get_db)):
+    jwt_manager = JWTManager(db=db)
+    user = authenticate_user_by_jwt(jwt)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
-    external_token = create_external_refresh_token(db=db, admin_id=user.id)
+    external_token = jwt_manager.create_external_refresh_token(admin_id=user["sub"])
     external_token_string = external_token.token
     return {
         "access_token": external_token_string,
