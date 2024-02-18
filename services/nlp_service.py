@@ -15,7 +15,7 @@ class LlamaService:
         self.service_context = ServiceContext.from_defaults(chunk_size=1000)
         self.storage_path = Path(self.storage)
 
-    def search_in_documents(self, search_query: str):
+    async def search_in_documents(self, search_query: str):
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
         try:
