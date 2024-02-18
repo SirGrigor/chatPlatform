@@ -9,7 +9,6 @@ import os
 from db.models.document import Document
 import fitz  # PyMuPDF
 
-
 def save_document_file(file, file_path: str):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)

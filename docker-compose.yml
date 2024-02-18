@@ -3,18 +3,18 @@ version: '3.8'
 services:
   app:
     build: .
+    image: app:latest
     ports:
       - "8000:8000"
     depends_on:
       - rabbitmq
       - db
     environment:
-      - RABBITMQ_URL=amqp://user:password@rabbitmq/%2F
-      - DATABASE_URL=postgresql://postgres:postgres@db/mydatabase
-      - DOCUMENT_STORAGE_PATH=/app/documents
+      RABBITMQ_URL: amqp://user:password@rabbitmq/%2F
+      DATABASE_URL: postgresql://postgres:postgres@db/mydatabase
+      DOCUMENT_STORAGE_PATH: /app/documents
     volumes:
       - .:/app
-      - shared_document_storage:/app/documents  # Updated to use shared volume
     entrypoint: /app/entrypoint.sh
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --ssl-keyfile certificates/key.pem --ssl-certfile certificates/cert.pem --log-level debug
     networks:
@@ -55,11 +55,10 @@ services:
       - app_network
 
 volumes:
-  postgres_data:
-  shared_document_storage:
+  postgres_data: {}
+
 
 networks:
   app_network:
     name: chatplatform_app_network
     driver: bridge
-

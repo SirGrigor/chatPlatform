@@ -11,7 +11,7 @@ os.environ["OPENAI_API_KEY"] = 'sk-vly1ZvFpT4zX1FsqxkAfT3BlbkFJHhzR7e88dieGQFP7i
 class LlamaService:
     def __init__(self, document_path: str):
         self.storage = "./storage"
-        self.data_path = document_path
+        self.data_path = os.getenv("DOCUMENT_STORAGE_PATH", "/app/documents")
         self.service_context = ServiceContext.from_defaults(chunk_size=1000)
         self.storage_path = Path(self.storage)
 
