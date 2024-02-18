@@ -7,6 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 import os
 from db.models.document import Document
+import fitz  # PyMuPDF
 
 
 def save_document_file(file, file_path: str):
@@ -31,7 +32,6 @@ def get_documents_for_course(db: Session, course_id: int):
     return db.query(Document).filter(Document.course_id == course_id).all()
 
 
-import fitz  # PyMuPDF
 
 
 def extract_pdf_metadata(filepath: str) -> dict:

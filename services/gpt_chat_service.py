@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 
+import httpx
 from openai import OpenAI
 from sqlalchemy.orm import Session
 
@@ -9,6 +10,7 @@ from db.models.chat_session import ChatSession
 from db.models.document import Document
 from db.models.gpt_preset import GptPreset
 from schemas.gpt_model import GptModelName
+from schemas.nlp import QueryRequest
 
 
 class GptChatService:
@@ -132,8 +134,6 @@ class GptChatService:
             else:
                 # Handle the case where GPT fails to return a valid response
                 yield None, ".", user_id
-
-
 
     async def gpt_chat_request(self, messages, preset):
         # Send the ChatCompletion request with streaming enabled
