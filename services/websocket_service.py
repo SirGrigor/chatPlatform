@@ -3,7 +3,7 @@ from typing import AsyncGenerator
 
 from db.models.external_user import ExternalUser
 from services.gpt_chat_service import GptChatService
-from services.jwt_manager import JWTManager
+from services.jwt_manager import verify_external_token
 
 
 class WebSocketService:
@@ -24,5 +24,4 @@ class WebSocketService:
             yield response_chunk
 
     async def verify_external_token(self, token: str) -> tuple[int, str]:
-        jwt_manager = JWTManager(self.db)
-        return await jwt_manager.verify_external_token(token)
+        return await verify_external_token(token)

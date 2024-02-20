@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from db.session import DBSession
 from schemas.auth import Token, Login
 from services.jwt_manager import create_access_token, JWTManager
-from services.user_service import UserService, authenticate_user_by_jwt
+from services.user_service import UserService
 
 router = APIRouter()
 
@@ -26,10 +26,11 @@ def login_for_access_token(form_data: Login, db: Session = Depends(DBSession.get
 @router.post("/external/token", response_model=Token)
 def get_external_access_token(jwt: str, db: Session = Depends(DBSession.get_db)):
     jwt_manager = JWTManager(db=db)
-    user = authenticate_user_by_jwt(jwt)
+    user_service = UserService(db=db)
+    user = user_service.authenticate_user_by_jwt(jwt)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
-    external_token = jwt_manager.create_external_refresh_token(admin_id=user["sub"])
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect jwt")
+    external_token = jwt_manager.create_external_refresh_token(admin_id=user.id)
     external_token_string = external_token.token
     return {
         "access_token": external_token_string,

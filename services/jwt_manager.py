@@ -1,20 +1,10 @@
-from asyncio.log import logger
 from datetime import datetime, timedelta
 
 from fastapi import HTTPException
 from jose import jwt, JWTError
 
 from core.config import settings
-from core.exceptions import WebSocketAuthException
 from db.models.refresh_token import RefreshToken
-
-
-def verify_token(token: str):
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        return payload  # Return user information or token payload as needed
-    except JWTError:
-        raise WebSocketAuthException("Invalid or expired token")
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -27,6 +17,18 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
         return encoded_jwt
+
+
+async def verify_external_token(token: str):
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        admin_id = payload.get("admin_id")
+        user_type = payload.get("type")
+        if user_type != "external_admin":
+            raise HTTPException(status_code=401, detail="Invalid token type")
+        return admin_id, user_type
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 class JWTManager:
@@ -59,14 +61,16 @@ class JWTManager:
         self.db.refresh(db_refresh_token)
         return db_refresh_token
 
-    async def verify_external_token(self, token: str):
+    def verify_token(self, token: str):
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-            logger.info(f"JWT Payload: {payload}")  # Log the payload for debugging
-            admin_id = payload.get("admin_id")
-            user_type = payload.get("type")
-            if user_type != "external_admin":
-                raise HTTPException(status_code=401, detail="Invalid token type")
-            return admin_id, user_type
-        except JWTError:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+            user_id = payload.get("sub")
+            if user_id is None:
+                raise HTTPException(status_code=401, detail="Invalid token data. Missing user ID.")
+            db_token = self.db.query(RefreshToken).filter(RefreshToken.token == token, RefreshToken.user_id == user_id).first()
+            if db_token is None or db_token.expires_at < datetime.utcnow():
+                raise HTTPException(status_code=401, detail="Token not found or has expired.")
+
+            return db_token.user_id, db_token.user_type
+        except JWTError as e:
+            raise HTTPException(status_code=401, detail=f"Invalid or expired token: {str(e)}")

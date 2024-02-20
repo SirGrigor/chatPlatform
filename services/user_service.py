@@ -5,14 +5,7 @@ from core.security import get_password_hash, verify_password
 from schemas.user import UserCreate
 from typing import Optional
 
-from services.jwt_manager import verify_token, JWTManager
-
-
-def authenticate_user_by_jwt(jwt: str) -> Optional[AdminUser]:
-    user = verify_token(jwt)
-    if not user:
-        return None
-    return user
+from services.jwt_manager import JWTManager
 
 
 class UserService:
@@ -37,4 +30,11 @@ class UserService:
             return None
         if not verify_password(password, user.password_hash):
             return None
+        return user
+
+    def authenticate_user_by_jwt(self, jwt: str) -> Optional[AdminUser]:
+        user_id, user_type = self.jwt_manager.verify_token(jwt)
+        if not user_id or user_type != "admin":
+            return None
+        user = self.db.query(AdminUser).filter(AdminUser.id == user_id).first()
         return user
