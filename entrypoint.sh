@@ -6,8 +6,8 @@ while ! nc -z db 5432; do
 done
 echo "PostgreSQL started"
 
-# Run Alembic Upgrade
-alembic upgrade head
+echo "Running Alembic migrations..."
+poetry run alembic upgrade head
 
-# Then start your application
-exec "$@"
+echo "Starting application..."
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --ssl-keyfile=/app/certificates/key.pem --ssl-certfile=/app/certificates/cert.pem --log-level debug

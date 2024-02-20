@@ -4,10 +4,8 @@ import shutil
 import uuid
 
 import chardet
-import fitz  # PyMuPDF
 from fastapi import UploadFile
 from sqlalchemy import func
-
 from db.models.document import Document
 from db.session import DBSession
 
@@ -15,6 +13,7 @@ db_session = DBSession().get_db()
 
 
 def extract_pdf_metadata(filepath: str) -> dict:
+    import fitz  # PyMuPDF
     doc = fitz.open(filepath)
     metadata = doc.metadata
     doc.close()
