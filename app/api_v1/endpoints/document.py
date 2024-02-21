@@ -11,10 +11,11 @@ router = APIRouter()
 
 
 @router.post("/upload/{course_id}", response_model=DocumentOut)
-async def upload_document_endpoint(course_id: int, file: UploadFile = File(...), db_session: Session = Depends(DBSession.get_db)):
+async def upload_document_endpoint(course_id: int, file: UploadFile = File(...),
+                                   db_session: Session = Depends(DBSession.get_db)):
     # Assume base_path is configured elsewhere or passed as an environment variable
     document_service = DocumentService(db=db_session)
-    document = document_service.upload_document(course_id=course_id, file=file, base_path="/app/documents")
+    document = document_service.upload_document(course_id=course_id, file=file)
     return document
 
 
