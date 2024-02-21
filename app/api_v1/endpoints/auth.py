@@ -9,17 +9,16 @@ from services.user_service import UserService
 router = APIRouter()
 
 
-@router.post("/token", response_model=Token)
+@router.post("/login", response_model=Token)
 def login_for_access_token(form_data: Login, db: Session = Depends(DBSession.get_db)):
     user_service = UserService(db=db)
-    user = user_service.authenticate_user(form_data.email, form_data.password)
-    if not user:
+    token = user_service.authenticate_user(form_data.email, form_data.password)
+    if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
 
-    access_token = create_access_token(data={"sub": user.username})
     return {
-        "access_token": access_token,
-        "token_type": "bearer"
+        "access_token": token.token,
+        "token_type": "access_token"
     }
 
 
