@@ -13,8 +13,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("chatplatform")
 
 
-# Now you can use logger.info(), logger.debug(), etc.
-
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     if expires_delta:
@@ -29,7 +27,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 
 async def verify_external_token(token: str):
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = await decode_token(token)
         admin_id = payload.get("admin_id")
         user_type = payload.get("type")
         if user_type != "external_admin":
@@ -37,6 +35,10 @@ async def verify_external_token(token: str):
         return admin_id, user_type
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+async def decode_token(token):
+    return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
 
 
 class JWTManager:

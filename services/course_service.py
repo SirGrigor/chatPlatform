@@ -16,7 +16,6 @@ class CourseService:
         course_data['created_by'] = user_id
         course_data['created_at'] = func.now()
         course_data['updated_at'] = func.now()
-        course_data.pop('admin_user_id', None)
 
         db_course = Course(**course_data)
         self.db.add(db_course)

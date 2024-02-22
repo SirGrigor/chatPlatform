@@ -1,8 +1,7 @@
 from fastapi import APIRouter
-from .endpoints import auth, websocket, course, document, user, gpt_preset
+from .endpoints import auth, websocket, course, document, gpt_preset
 
 api_router = APIRouter()
-api_router.include_router(user.router, prefix="/users", tags=["Users"])
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(course.router, prefix="/courses", tags=["Courses"])
 api_router.include_router(document.router, prefix="/documents", tags=["Documents"])
