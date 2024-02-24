@@ -20,42 +20,6 @@ router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
-@router.post("/register", response_model=UserOut)
-def register_user(user_in: UserCreate, db: Session = Depends(DBSession.get_db)) -> UserOut:
-    user_service = UserService(db=db)
-    db_user = user_service.create_user(user_in=user_in)
-    return db_user
-
-
-@router.post("/login", response_model=Token)
-def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(DBSession.get_db)):
-    user_service = UserService(db=db)
-    user = user_service.authenticate_user(email=form_data.username, password=form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = create_access_token(data={"sub": str(user.id)})
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
-@router.post("/external/token", response_model=Token)
-def get_external_access_token(jwt_token: str, db: Session = Depends(DBSession.get_db)):
-    jwt_manager = JWTManager(db=db)
-    user_service = UserService(db=db)
-    user = user_service.authenticate_user_by_jwt(jwt_token)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect jwt")
-    external_token = jwt_manager.create_external_refresh_token(admin_id=user.id)
-    external_token_string = external_token.token
-    return {
-        "access_token": external_token_string,
-        "token_type": "websocket"
-    }
-
-
 async def get_current_user(token: str = Depends(oauth2_scheme),
                            db: Session = Depends(DBSession.get_db)) -> AdminUser:
     credentials_exception = HTTPException(
@@ -88,3 +52,38 @@ async def get_current_active_user(
     if current_user.id is None:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+@router.post("/register", response_model=UserOut)
+def register_user(user_in: UserCreate, db: Session = Depends(DBSession.get_db)) -> UserOut:
+    user_service = UserService(db=db)
+    db_user = user_service.create_user(user_in=user_in)
+    return db_user
+
+
+@router.post("/login", response_model=Token)
+def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(DBSession.get_db)):
+    user_service = UserService(db=db)
+    user = user_service.authenticate_user(email=form_data.username, password=form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = create_access_token(data={"sub": str(user.id)})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/external/token", response_model=Token)
+def get_external_access_token(db: Session = Depends(DBSession.get_db),
+                              current_user: AdminUser = Depends(get_current_active_user)):
+    jwt_manager = JWTManager(db=db)
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect jwt")
+    external_token = jwt_manager.create_external_refresh_token(admin_id=current_user.id)
+    external_token_string = external_token.token
+    return {
+        "access_token": external_token_string,
+        "token_type": "websocket"
+    }

@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import List
 
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
@@ -8,18 +8,11 @@ from db.models.admin import AdminUser
 from db.models.course import Course
 from db.session import DBSession
 from schemas.course import CourseCreate, CourseOut, CoursesListOut
+from schemas.document import DocumentOut
 from services.course_service import CourseService
+from services.document_service import DocumentService
 
 router = APIRouter()
-
-
-@router.post("/", response_model=CourseOut)
-async def create_course_endpoint(course_in: CourseCreate,
-                                 current_user: AdminUser = Depends(get_current_active_user),
-                                 db_session: Session = Depends(DBSession.get_db)):
-    course_service = CourseService(db=db_session)
-    course = course_service.create_course(course_in=course_in, user_id=current_user.id)
-    return course
 
 
 @router.get("/", response_model=CoursesListOut)
@@ -31,7 +24,23 @@ def read_courses(db_session: Session = Depends(DBSession.get_db)):
     return CoursesListOut(courses=courses_list, total=len(courses_list))
 
 
-@router.delete("/courses/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.get("/{course_id}", response_model=List[DocumentOut])
+def list_documents_endpoint(course_id: int, db_session: Session = Depends(DBSession.get_db)):
+    document_service = DocumentService(db=db_session)
+    documents = document_service.get_documents_for_course(course_id=course_id)
+    return documents
+
+
+@router.post("/", response_model=CourseOut)
+async def create_course_endpoint(course_in: CourseCreate,
+                                 current_user: AdminUser = Depends(get_current_active_user),
+                                 db_session: Session = Depends(DBSession.get_db)):
+    course_service = CourseService(db=db_session)
+    course = course_service.create_course(course_in=course_in, user_id=current_user.id)
+    return course
+
+
+@router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_course_endpoint(course_id: int, db_session: Session = Depends(DBSession.get_db)):
     course_service = CourseService(db=db_session)
     if not course_service.delete_course(course_id):

@@ -6,6 +6,7 @@ from fastapi import UploadFile
 from sqlalchemy import func
 
 from db.models.document import Document
+from schemas.document import DocumentOut, DocumentsResponse
 
 
 def save_document_file(file, file_path: str):
@@ -59,7 +60,9 @@ class DocumentService:
 
         file_path = os.path.join(self.base_path, f"{uuid.uuid4()}.{file_extension}")
         save_document_file(file, file_path)
-        return self.create_document(course_id=course_id, filename=filename, filepath=file_path,
+        return self.create_document(course_id=course_id,
+                                    filename=filename,
+                                    filepath=file_path,
                                     file_type=file.content_type)
 
     def get_documents_for_course(self, course_id: int):
@@ -82,3 +85,16 @@ class DocumentService:
                 self.db.commit()
                 return True
         return False
+
+    def get_all_documents(self) -> DocumentsResponse:
+        documents = self.db.query(Document).all()
+        document_out_list = [DocumentOut(
+            id=document.id,
+            course_id=document.course_id,
+            created_at=document.created_at,
+            updated_at=document.updated_at,
+            filename=document.filename,
+            filepath=document.filepath,
+            file_type=document.file_type,
+        ) for document in documents]
+        return DocumentsResponse(documents=document_out_list, total=len(documents))

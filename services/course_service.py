@@ -50,3 +50,10 @@ class CourseService:
         if course:
             return course.id
         return 0
+
+    def get_course_documents(self, course_id: int):
+        documents = self.db.query(Document).filter(Document.course_id == course_id).all()
+        return {
+            "course_id": course_id,
+            "documents": Doc
+        }
