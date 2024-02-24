@@ -1,3 +1,5 @@
+import asyncio
+
 from openai import OpenAI
 from core.config import settings
 from db.models.gpt_preset import GptPreset

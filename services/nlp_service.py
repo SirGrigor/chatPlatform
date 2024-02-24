@@ -4,16 +4,22 @@ from pathlib import Path
 from llama_index.core import (SimpleDirectoryReader, VectorStoreIndex,
                               ServiceContext, StorageContext, load_index_from_storage,
                               )
-
-os.environ["OPENAI_API_KEY"] = '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'
+from llama_index.llms.openai import OpenAI
+from llama_index.core import Settings
+from core.config import settings
+from llama_index.agent.openai import OpenAIAgent
+os.environ["OPENAI_API_KEY"] = settings.OPENAPI_KEY
+Settings.llm = OpenAI(temperature=0.7,
+                      model="gpt-4-turbo-preview")
 
 
 class LlamaService:
     def __init__(self, document_path: str):
         self.storage = "./storage"
-        self.data_path = os.getenv("DOCUMENT_STORAGE_PATH", "/app/documents")
+        self.data_path = os.getenv("DOCUMENT_STORAGE_PATH", document_path)
         self.service_context = ServiceContext.from_defaults(chunk_size=1000)
         self.storage_path = Path(self.storage)
+        self.agent = OpenAIAgent.from_tools(llm=Settings.llm, service_context=self.service_context)
 
     async def search_in_documents(self, search_query: str):
         self.storage_path.mkdir(parents=True, exist_ok=True)
@@ -27,6 +33,4 @@ class LlamaService:
             index = VectorStoreIndex.from_documents(documents, service_context=self.service_context)
             index.storage_context.persist(self.storage)
 
-        query_engine = index.as_query_engine(similarity_top_k=5)
-        response = query_engine.query(search_query)
-        return response.response
+        return self.agent.chat(search_query).response
