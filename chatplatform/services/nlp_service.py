@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Dict
 
-from llama_index.agent.openai import OpenAIAgent
+from llama_index.agent.openai import OpenAIAssistantAgent
 from llama_index.core import Settings
 from llama_index.core import (SimpleDirectoryReader, VectorStoreIndex,
                               ServiceContext, StorageContext, load_index_from_storage,
@@ -11,9 +11,7 @@ from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.llms.openai import OpenAI
 
 from chatplatform.core.config import settings, logger
-from chatplatform.db.models.course import Course
 from chatplatform.schemas.course import CoursesGPTRequest
-from chatplatform.services.course_service import CourseService
 from chatplatform.services.document_service import DocumentService
 
 os.environ["OPENAI_API_KEY"] = settings.OPENAPI_KEY
@@ -29,7 +27,6 @@ class LlamaService:
         self.service_context = ServiceContext.from_defaults(chunk_size=1000)
         self.storage_path = Path(self.storage)
         self.query_engine_tools: Dict[str, QueryEngineTool] = {}
-        self.agent = OpenAIAgent.from_tools([], llm=Settings.llm, service_context=self.service_context)
 
     async def index_document(self):
         self.storage_path.mkdir(parents=True, exist_ok=True)
@@ -74,26 +71,32 @@ class LlamaService:
                 logger.error(f"Error loading or creating index for {course_name}: {e}")
                 return None
 
-            query_engine = index.as_query_engine(similarity_threshold=0.5)
+            query_engine = index.as_query_engine(similarity_top_k=3)
             tool = QueryEngineTool(
                 query_engine=query_engine,
-                metadata=ToolMetadata(description=f"Assistance based on {course_name} documents.")
+                metadata=ToolMetadata(name=course_name, description=f"Assistance based on {course_name} documents.")
             )
             self.query_engine_tools[course_name] = tool
         return self.query_engine_tools[course_name]
 
     async def ask_gpt(self, initial_message: str, courses_request: CoursesGPTRequest):
-        tools_for_request = []
+        query_engine_tools = []
         for course in courses_request.courses:
             course_name = course.title.replace(" ", "_")
             tool = await self.ensure_tool_for_course(course_name)
             if tool:
-                tools_for_request.append(tool)
+                query_engine_tools.append(tool)
 
-        if tools_for_request:
-            self.agent.from_tools(tools_for_request)
-            response = self.agent.chat(initial_message)
-            self.agent.from_tools([])
+        if query_engine_tools:
+            agent = OpenAIAssistantAgent.from_new(
+                name="Document Context GPT",
+                instructions="You are an assistant with access to course documents. Use these documents to inform your answers.",
+                tools=query_engine_tools,
+                openai_tools=[],
+                files=[],
+                instructions_prefix="Please provide detailed, accurate, and informative answers."
+            )
+            response = agent.chat(initial_message)
             return response.response
         else:
             logger.error("No query engines loaded for the requested courses.")
