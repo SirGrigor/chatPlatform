@@ -2,7 +2,8 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    build:
+      context: .
     image: app:latest
     ports:
       - "8000:8000"
@@ -15,7 +16,7 @@ services:
       DOCUMENT_STORAGE_PATH: /app/documents
     volumes:
       - .:/app
-    entrypoint: ["/app/entrypoint.sh"]
+    entrypoint: [ "/app/entrypoint.sh" ]
     networks:
       - app_network
 
@@ -43,10 +44,10 @@ services:
     networks:
       - app_network
 
-volumes:
-  postgres_data: {}
-
 networks:
   app_network:
     name: chatplatform_app_network
     driver: bridge
+
+volumes:
+  postgres_data: { }

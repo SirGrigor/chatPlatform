@@ -6,8 +6,15 @@ while ! nc -z db 5432; do
 done
 echo "PostgreSQL started"
 
+# Navigate to the directory where alembic is located
 echo "Running Alembic migrations..."
+cd /app/chatplatform
 poetry run alembic upgrade head
 
 echo "Starting application..."
-exec uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --ssl-keyfile=/app/certificates/key.pem --ssl-certfile=/app/certificates/cert.pem --log-level debug
+# Navigate back to the root application directory
+cd /app
+
+# Start Uvicorn with the FastAPI application
+exec uvicorn chatplatform.app.main:app --host 0.0.0.0 --port 8000 --ssl-keyfile=/app/chatplatform/certificates/key.pem --ssl-certfile=/app/chatplatform/certificates/cert.pem --log-level debug
+
