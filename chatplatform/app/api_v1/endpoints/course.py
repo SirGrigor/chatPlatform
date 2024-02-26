@@ -16,7 +16,8 @@ router = APIRouter()
 
 
 @router.get("/", response_model=CoursesListOut)
-def read_courses(db_session: Session = Depends(DBSession.get_db)):
+def read_courses(db_session: Session = Depends(DBSession.get_db),
+                 current_user: AdminUser = Depends(get_current_active_user)):
     courses_query = db_session.query(Course).all()
     courses_list = [CourseOut(id=course.id, title=course.title, description=course.description,
                               admin_user_id=course.created_by, created_at=course.created_at) for course in
@@ -25,7 +26,8 @@ def read_courses(db_session: Session = Depends(DBSession.get_db)):
 
 
 @router.get("/{course_id}", response_model=List[DocumentOut])
-def list_documents_endpoint(course_id: int, db_session: Session = Depends(DBSession.get_db)):
+def list_documents_endpoint(course_id: int, db_session: Session = Depends(DBSession.get_db),
+                            current_user: AdminUser = Depends(get_current_active_user)):
     document_service = DocumentService(db=db_session)
     documents = document_service.get_documents_for_course(course_id=course_id)
     return documents
@@ -41,7 +43,8 @@ async def create_course_endpoint(course_in: CourseCreate,
 
 
 @router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_course_endpoint(course_id: int, db_session: Session = Depends(DBSession.get_db)):
+def delete_course_endpoint(course_id: int, db_session: Session = Depends(DBSession.get_db),
+                           current_user: AdminUser = Depends(get_current_active_user)):
     course_service = CourseService(db=db_session)
     if not course_service.delete_course(course_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
