@@ -101,3 +101,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 celery = "^5.2.3" # Use the latest version or adjust as needed
 redis = "^4.0.2" # Use the latest version or adjust as needed
+sentence-transformers = "^2.4.0"

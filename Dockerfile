@@ -15,6 +15,8 @@ RUN curl -sSL https://install.python-poetry.org | python3 - && \
 ENV PYTHONUNBUFFERED=1
 COPY pyproject.toml poetry.lock* ./
 RUN poetry install --no-dev --no-interaction --no-ansi
+RUN pip install --upgrade pip && \
+    pip install torch sentence-transformers
 COPY . .
 RUN chmod +x entrypoint.sh
 EXPOSE 8000
