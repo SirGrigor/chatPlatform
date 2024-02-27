@@ -16,4 +16,5 @@ class Document(Base):
     updated_at = Column(TIMESTAMP, nullable=False)
     document_content = Column(Text, nullable=True)  # Changed from String to Text
     document_metadata = Column(Text, nullable=True)  # Changed from String to Text
+    doc_id = Column(String(255), nullable=True)
     course = relationship("Course", backref="documents")

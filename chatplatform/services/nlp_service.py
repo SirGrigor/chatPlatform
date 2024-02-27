@@ -11,8 +11,8 @@ from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.llms.openai import OpenAI
 
 from chatplatform.core.config import settings, logger
+from chatplatform.db.models.document import Document
 from chatplatform.schemas.course import CoursesGPTRequest
-from chatplatform.services.document_service import DocumentService
 
 os.environ["OPENAI_API_KEY"] = settings.OPENAPI_KEY
 Settings.llm = OpenAI(temperature=0.7,
@@ -30,8 +30,7 @@ class LlamaService:
 
     async def index_document(self):
         self.storage_path.mkdir(parents=True, exist_ok=True)
-        document_service = DocumentService(self.db)
-        documents = await document_service.get_documents()
+        documents = self.db.query(Document).all()
 
         for doc in documents:
             subcategory_path = Path(doc.filepath).parent
@@ -43,9 +42,13 @@ class LlamaService:
             try:
                 storage_context = StorageContext.from_defaults(persist_dir=str(doc_storage_path))
                 index = load_index_from_storage(storage_context)
+                document = SimpleDirectoryReader(subcategory_path).load_data()
+                index.refresh_ref_docs(document, update_kwargs={"delete_kwargs": {"delete_from_docstore": True}})
             except Exception as e:
                 print(f"Loading index for {subcategory_name} failed, creating a new one:", e)
                 document = SimpleDirectoryReader(subcategory_path).load_data()
+                for d in document:
+                    await self.add_doc_id(d, doc)
                 index = VectorStoreIndex.from_documents(document, service_context=self.service_context)
                 index.storage_context.persist(str(doc_storage_path))
                 central_engine = index.as_query_engine(similarity_threshold=0.5)
@@ -59,6 +62,12 @@ class LlamaService:
                 ]
 
         return "Documents indexed successfully." + " " + " ".join([doc.filepath for doc in documents])
+
+    async def add_doc_id(self, d, doc):
+        doc.doc_id = d.doc_id
+        self.db.add(doc)
+        self.db.commit()
+        self.db.refresh(doc)
 
     async def ensure_tool_for_course(self, course_name: str):
         """Ensure that a query engine tool exists for the given course, creating it if necessary."""
