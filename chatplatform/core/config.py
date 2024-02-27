@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     RABBITMQ_URL: str  = "amqp://user:password@rabbitmq/%2F"
     SSL_CERT_FILE: str  = "certificates/cert.pem"
     SSL_KEY_FILE: str  = "certificates/key.pem"
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
 
 settings = Settings()
 
