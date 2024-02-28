@@ -4,17 +4,19 @@ from typing import Dict, Optional
 
 from celery import Celery, shared_task
 from llama_index.core import Settings, ServiceContext, StorageContext, load_index_from_storage, SimpleDirectoryReader, \
-    VectorStoreIndex
+    VectorStoreIndex, PromptHelper
+from llama_index.core.postprocessor import SentenceTransformerRerank
+from llama_index.core.service_context_elements.llm_predictor import LLM
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
-# from llama_index.core.postprocessor import SentenceTransformerRerank
 
 from chatplatform.core.config import settings, logger
 from chatplatform.db.models.document import Document
+from llama_index.core.node_parser import SentenceSplitter
 
 os.environ["OPENAI_API_KEY"] = settings.OPENAPI_KEY
 Settings.llm = OpenAI(temperature=0.7, model="gpt-4-turbo-preview")
-
 app = Celery('tasks', broker=settings.CELERY_BROKER_URL)
 
 
@@ -32,7 +34,8 @@ class DocumentIndexer:
     def __init__(self, db_session):
         self.db = db_session
         self.storage_path = Path(os.getenv("STORAGE_PATH", "./storage"))
-        self.service_context = ServiceContext.from_defaults(chunk_size=1000)
+        self.prompt_helper = PromptHelper(4096, 256, 0.5)
+        self.service_context = ServiceContext.from_defaults(chunk_size=1000, prompt_helper=self.prompt_helper)
         self.query_engine_tools: Dict[str, QueryEngineTool] = {}
 
     def index_document(self, doc: Document) -> None:
@@ -53,7 +56,9 @@ class DocumentIndexer:
         except Exception as e:
             logger.error(f"Failed to load index for {course_name}, creating a new one: {e}")
             document = SimpleDirectoryReader(document_path.parent).load_data()
-            index = VectorStoreIndex.from_documents(document, service_context=self.service_context)
+            splitter = SentenceSplitter(chunk_size=256)
+            index = VectorStoreIndex.from_documents(document, service_context=self.service_context,
+                                                    transformations=[splitter])
             index.storage_context.persist(str(doc_storage_path))
 
     async def ensure_tool_for_course(self, course_name: str) -> Optional[QueryEngineTool]:
@@ -65,12 +70,10 @@ class DocumentIndexer:
             except Exception as e:
                 logger.error(f"Error loading or creating index for {course_name}: {e}")
                 return None
-
-            # rerank = SentenceTransformerRerank(
-            #     model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=3
-            # )
-            # , node_postprocessors=[rerank]
-            query_engine = index.as_query_engine(similarity_top_k=3)
+            rerank = SentenceTransformerRerank(
+                model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=10
+            )
+            query_engine = index.as_query_engine(similarity_top_k=10, node_postprocessors=[rerank])
             tool = QueryEngineTool(
                 query_engine=query_engine,
                 metadata=ToolMetadata(name=course_name, description=f"Assistance based on {course_name} documents.")
