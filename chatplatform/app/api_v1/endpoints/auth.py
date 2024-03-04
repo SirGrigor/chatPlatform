@@ -55,9 +55,9 @@ async def get_current_active_user(
 
 
 @router.post("/register", response_model=UserOut)
-async def register_user(user_in: UserCreate, db: Session = Depends(DBSession.get_db)) -> UserOut:
+def register_user(user_in: UserCreate, db: Session = Depends(DBSession.get_db)) -> UserOut:
     user_service = UserService(db=db)
-    db_user = await user_service.create_user(user_in=user_in)
+    db_user = user_service.create_user(user_in=user_in)
     return db_user
 
 
