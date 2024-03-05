@@ -16,5 +16,6 @@ echo "Starting application..."
 cd /app
 
 # Start Uvicorn with the FastAPI application
-exec uvicorn chatplatform.app.main:app --host 0.0.0.0 --port 8000 --ssl-keyfile=/app/chatplatform/certificates/key.pem --ssl-certfile=/app/chatplatform/certificates/cert.pem --log-level debug
+#exec uvicorn chatplatform.app.main:app --host 0.0.0.0 --port 8000 --ssl-keyfile=/app/chatplatform/certificates/key.pem --ssl-certfile=/app/chatplatform/certificates/cert.pem --log-level debug
+exec uvicorn chatplatform.app.main:app --host 0.0.0.0 --port 8000 --log-level debug
 
