@@ -9,7 +9,7 @@ from chatplatform.app.api_v1.endpoints.auth import get_current_active_user
 from chatplatform.db.models.admin import AdminUser
 from chatplatform.db.session import DBSession
 from chatplatform.schemas.gpt_model import GptPresetResponseSchema, GptPresetCreate, GptModelDetailsResponse, \
-    get_model_details
+    get_model_details, PresetResponse, PresetSchemasResponse
 from chatplatform.services.gpt_chat_service import GptChatService
 
 router = APIRouter()
@@ -37,3 +37,9 @@ def get_supported_models(current_user: AdminUser = Depends(get_current_active_us
 @router.get("/chat/window/", response_class=HTMLResponse)
 async def chat_window(request: Request, current_user: AdminUser = Depends(get_current_active_user)):
     return templates.TemplateResponse("chat.html", {"request": request})
+
+
+@router.get("/")
+def get_presets(current_user: AdminUser = Depends(get_current_active_user), db_session: Session = Depends(DBSession.get_db)):
+    gpt_chat_service = GptChatService(db=db_session)
+    return gpt_chat_service.get_presets(current_user.id)

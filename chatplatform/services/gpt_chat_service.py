@@ -5,7 +5,7 @@ from chatplatform.core.config import settings, logger
 from chatplatform.db.models.gpt_preset import GptPreset
 from chatplatform.db.session import DBSession
 from chatplatform.schemas.course import CoursesGPTRequest
-from chatplatform.schemas.gpt_model import GptModelName
+from chatplatform.schemas.gpt_model import GptModelName, PresetResponse, PresetSchemasResponse
 from chatplatform.services.document_indexer_service import DocumentIndexer
 
 db_session = DBSession().get_db()
@@ -64,3 +64,20 @@ class GptChatService:
         )
         response = agent.chat(initial_message)
         return response.response
+
+    def get_presets(self, user_id: int) -> PresetSchemasResponse:
+        # Fetch presets filtered by the given user_id, which seems to be intended as a course_id.
+        presets = self.db.query(GptPreset).all()
+
+        # Map each GptPreset instance to a PresetResponse object.
+        # preset_schema_list = [PresetResponse(
+        #     id=preset.id,
+        #     name=preset.name,
+        #     model=preset.model,
+        #     max_tokens=preset.max_tokens,
+        #     temperature=preset.temperature,
+        #     course_id=preset.course_id  # Assuming this is intended as a course_id based on your initial method.
+        # ) for preset in presets]
+
+        # return PresetSchemasResponse(presets=preset_schema_list, total=len(presets))
+        return presets

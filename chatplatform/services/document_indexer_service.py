@@ -5,15 +5,13 @@ from typing import Dict, Optional
 from celery import Celery, shared_task
 from llama_index.core import Settings, ServiceContext, StorageContext, load_index_from_storage, SimpleDirectoryReader, \
     VectorStoreIndex, PromptHelper
+from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.postprocessor import SentenceTransformerRerank
-from llama_index.core.service_context_elements.llm_predictor import LLM
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
 
 from chatplatform.core.config import settings, logger
 from chatplatform.db.models.document import Document
-from llama_index.core.node_parser import SentenceSplitter
 
 os.environ["OPENAI_API_KEY"] = settings.OPENAPI_KEY
 Settings.llm = OpenAI(temperature=0.7, model="gpt-4-turbo-preview")

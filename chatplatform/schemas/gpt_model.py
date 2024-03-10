@@ -110,3 +110,20 @@ def get_model_details() -> List[ModelInfo]:
                   description="Snapshot of GPT-3.5 16k Turbo from June 13th, 2023."),
     ]
     return models
+
+
+class PresetResponse(BaseModel):
+    id: int
+    name: str
+    model: str
+    max_tokens: int
+    temperature: float
+    course_id: int  # Ensure this represents the intended field; the duplicate has been removed for clarity.
+
+    class Config:
+        orm_mode = True
+
+
+class PresetSchemasResponse:
+    presets: List[PresetResponse]
+    total: int
