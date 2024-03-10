@@ -12,14 +12,14 @@ ENV PATH="${PATH}:/root/.local/bin"
 RUN curl -sSL https://install.python-poetry.org | python3 - && \
     poetry config virtualenvs.create false
 
-ENV PYTHONUNBUFFERED=1
 COPY pyproject.toml poetry.lock* ./
-RUN poetry install --no-dev --no-interaction --no-ansi
 RUN pip install --upgrade pip && \
-    pip install torch sentence-transformers
+    pip install poetry && \
+    poetry install --no-dev --no-interaction --no-ansi
+
+RUN pip install torch sentence-transformers
+
 COPY . .
 RUN chmod +x entrypoint.sh
 EXPOSE 8000
-
-# Specify the command to run the application
-CMD ["/entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]
