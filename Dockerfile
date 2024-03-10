@@ -22,4 +22,4 @@ RUN pip install torch sentence-transformers
 COPY . .
 RUN chmod +x entrypoint.sh
 EXPOSE 8000
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["sh", "/app/entrypoint.sh"]
